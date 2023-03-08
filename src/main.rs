@@ -1,6 +1,6 @@
 // use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
-use chumsky::{prelude::*, stream::Stream, Error};
-use std::{collections::HashMap, env, fmt, fs};
+use chumsky::{container::Container, error::Error, prelude::*, util::Maybe};
+use std::fmt;
 
 /*
   # Primitives
@@ -15,7 +15,7 @@ use std::{collections::HashMap, env, fmt, fs};
   Nil: `nil`
   Symbols: `/[a-zA-Z_-][a-zA-Z0-9_-]*`
 
-  Variables: `(def x 2)` `(set x 3)`
+  Variables: `(def x 2)` (use `def` to re-assign a variable)
   Functions: `(defn add [x y] (+ x y))`
   Conditionals: `(if (eq x 2)) "x is 2" "x is not 2")` `(if (eq x 2) "x is 2")`
   Loops: `(while (lt x 10) (println x) (set x (+ x 1)))`
@@ -27,17 +27,17 @@ use std::{collections::HashMap, env, fmt, fs};
 
 pub type Span = std::ops::Range<usize>;
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-enum Token {
+#[derive(Clone, Debug, PartialEq)]
+enum Token<'a> {
   Nil,
   Bool(bool),
-  Num(String),
-  Str(String),
-  Symbol(String),
+  Num(f64),
+  Str(&'a str),
+  Symbol(&'a str),
   Ctrl(char),
 }
 
-impl fmt::Display for Token {
+impl<'a> fmt::Display for Token<'a> {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       Token::Nil => write!(f, "nil"),
@@ -50,65 +50,114 @@ impl fmt::Display for Token {
   }
 }
 
-fn lexer() -> impl Parser<char, Vec<(Token, Span)>, Error = Simple<char>> {
+fn lexer<'source, O, E>(
+) -> impl Parser<'source, &'source str, O, extra::Err<E>> + Clone
+where
+  O: Container<(Token<'source>, SimpleSpan)>,
+  E: 'source + Error<'source, &'source str>,
+{
   // A parser for Nil
-  let nil = just("nil").map(|_| Token::Nil);
+  let nil = text::keyword("nil").to(Token::Nil);
 
   // A parser for Booleans
-  let boolean = just("true").or(just("false")).map(|s| {
-    if s == "true" {
-      Token::Bool(true)
-    } else {
-      Token::Bool(false)
-    }
-  });
+  let boolean = choice((
+    text::keyword("true").to(Token::Bool(true)),
+    text::keyword("false").to(Token::Bool(false)),
+  ));
 
   // A parser for Numbers
   let num = text::int(10)
-    .chain::<char, _, _>(just('.').chain(text::digits(10)).or_not().flatten())
-    .collect::<String>()
+    .then(
+      just('.')
+        .then(text::digits(10))
+        .then(
+          one_of("eE")
+            .then(one_of("+-").or_not())
+            .then(text::digits(10))
+            .or_not(),
+        )
+        .or_not(),
+    )
+    .slice()
+    .try_map(|s, span| {
+      str::parse(s).map_err(|_| {
+        E::expected_found(
+          [Some(Maybe::Val('0'))],
+          s.chars().next().map(Maybe::Val),
+          span,
+        )
+      })
+    })
     .map(Token::Num);
 
   // A parser for Strings
-  let string = just('"')
-    .ignore_then(filter(|c| *c != '"').repeated())
-    .then_ignore(just('"'))
-    .collect::<String>()
-    .map(Token::Str);
+  let string = {
+    let escape = just('\\')
+      .then(choice((
+        just('\\'),
+        just('/'),
+        just('"'),
+        just('b').to('\x08'),
+        just('f').to('\x0c'),
+        just('n').to('\n'),
+        just('r').to('\r'),
+        just('t').to('\t'),
+        just('u').ignore_then(text::digits(16).exactly(4).slice().validate(
+          |s, span, emitter| {
+            char::from_u32(u32::from_str_radix(s, 16).unwrap()).unwrap_or_else(
+              || {
+                emitter.emit(E::expected_found(
+                  [Some(Maybe::Val('0')), Some(Maybe::Val('a'))],
+                  s.chars().next().map(Maybe::Val),
+                  span,
+                ));
+                '\u{fffd}' // unicode replacement character
+              },
+            )
+          },
+        )),
+      )))
+      .ignored();
 
-  let ALPHA =
-    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".to_string();
-  let SYMBOLS = "+-*/=<>!&|".to_string();
-  let NUMBERS = "0123456789".to_string();
-
-  let SYMBOL = ALPHA + &SYMBOLS;
+    none_of("\\\"")
+      .ignored()
+      .or(escape)
+      .repeated()
+      .slice()
+      .map(Token::Str)
+      .delimited_by(just('"'), just('"'))
+  };
 
   // A parser for Symbols
-  let symbol = one_of(SYMBOL.clone())
-    .chain(one_of(SYMBOL + &NUMBERS).repeated())
-    .collect::<String>()
+  let symbol = any()
+    .filter(|ch: &char| {
+      ch.is_alphabetic() | ch.is_ascii_graphic() | ch.is_ascii_punctuation()
+    })
+    .repeated()
+    .at_least(1)
+    .slice()
     .map(Token::Symbol);
 
   // A parser for control characters
-  let ctrl = one_of("()[]").map(|c| Token::Ctrl(c));
+  let ctrl = one_of("()[]").map(Token::Ctrl);
 
-  let token = num
-    .or(string)
-    .or(ctrl)
-    .or(boolean)
-    .or(nil)
-    .or(symbol)
-    .recover_with(skip_then_retry_until([]));
+  let token = num.or(string).or(ctrl).or(boolean).or(nil).or(symbol);
 
   token
     .map_with_span(|tok, span| (tok, span))
     .padded()
+    .recover_with(skip_then_retry_until(any().ignored(), end()))
     .repeated()
+    .collect()
 }
 
 fn main() {
-  const code: &str = "(+ 1 2)";
-  let (tokens, errs) = lexer().parse_recovery(code);
+  const CODE: &str = "(def x 2)\n(def x (+ x 1))";
+  let (tokens, errs) =
+    lexer::<Vec<_>, Rich<_>>().parse(CODE).into_output_errors();
 
-  println!("Tokens: {:?}", tokens);
+  errs.into_iter().for_each(|err| {
+    eprintln!("{}", err);
+  });
+  println!("Tokens: {:?}", tokens.unwrap());
 }
