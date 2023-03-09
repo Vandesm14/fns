@@ -101,7 +101,7 @@ where
       .ignored()
       .boxed();
 
-    none_of("\\\"")
+    none_of("\\\"\n")
       .ignored()
       .or(escape)
       .repeated()
@@ -114,7 +114,7 @@ where
   let symbol = any()
     .filter(|ch: &char| {
       (ch.is_alphabetic() || ch.is_ascii_graphic() || ch.is_ascii_punctuation())
-        && !"()".contains(*ch)
+        && !"()\"".contains(*ch)
     })
     .repeated()
     .at_least(1)

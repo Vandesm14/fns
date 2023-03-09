@@ -73,110 +73,89 @@ impl<'a> Program<'a> {
     self.fns.get(name)
   }
 
-  pub fn eval_expr(&mut self, expr: Expr<'a>) -> Option<Expr<'a>> {
+  pub fn eval_expr(&mut self, expr: Expr<'a>) -> Expr<'a> {
     match expr {
       Expr::List(exprs) => {
         let mut iter = exprs.iter();
         let (fn_name, span) = iter.next().unwrap();
+
+        let mut next_arg = || iter.next().unwrap().0.clone();
+        let mut eval_next = || self.eval_expr(next_arg());
 
         match fn_name {
           Expr::Symbol(name) => match *name {
             // Functions that are built into the language (starts with fns with weird args)
             "def" => {
               let name = iter.next().unwrap().0.clone();
-              let val = self.eval_expr(iter.next().unwrap().0.clone()).unwrap();
+              let val = self.eval_expr(iter.next().unwrap().0.clone());
 
               if let Expr::Symbol(name) = name {
                 self.set_var(name.to_string(), val.clone());
 
-                Some(val)
+                val
               } else {
                 panic!("Expected symbol for name {}", span);
               }
             }
 
             // Functions that are built into the language (fns with two args)
-            _ => {
-              let lhs = self.eval_expr(iter.next().unwrap().0.clone()).unwrap();
-              let rhs = self.eval_expr(iter.next().unwrap().0.clone()).unwrap();
+            _ => match *name {
+              "+" => match (eval_next(), eval_next()) {
+                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs + rhs),
+                _ => Expr::Nil,
+              },
+              "-" => match (eval_next(), eval_next()) {
+                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs - rhs),
+                _ => Expr::Nil,
+              },
+              "*" => match (eval_next(), eval_next()) {
+                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs * rhs),
+                _ => Expr::Nil,
+              },
+              "/" => match (eval_next(), eval_next()) {
+                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs / rhs),
+                _ => Expr::Nil,
+              },
 
-              match *name {
-                "+" => match (lhs, rhs) {
-                  (Expr::Num(lhs), Expr::Num(rhs)) => {
-                    Some(Expr::Num(lhs + rhs))
-                  }
-                  _ => Some(Expr::Nil),
-                },
-                "-" => match (lhs, rhs) {
-                  (Expr::Num(lhs), Expr::Num(rhs)) => {
-                    Some(Expr::Num(lhs - rhs))
-                  }
-                  _ => Some(Expr::Nil),
-                },
-                "*" => match (lhs, rhs) {
-                  (Expr::Num(lhs), Expr::Num(rhs)) => {
-                    Some(Expr::Num(lhs * rhs))
-                  }
-                  _ => Some(Expr::Nil),
-                },
-                "/" => match (lhs, rhs) {
-                  (Expr::Num(lhs), Expr::Num(rhs)) => {
-                    Some(Expr::Num(lhs / rhs))
-                  }
-                  _ => Some(Expr::Nil),
-                },
+              "=" => Expr::Bool(eval_next() == eval_next()),
+              "!=" => Expr::Bool(eval_next() != eval_next()),
+              ">" => match (eval_next(), eval_next()) {
+                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs > rhs),
+                _ => Expr::Nil,
+              },
+              ">=" => match (eval_next(), eval_next()) {
+                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs >= rhs),
+                _ => Expr::Nil,
+              },
+              "<" => match (eval_next(), eval_next()) {
+                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs < rhs),
+                _ => Expr::Nil,
+              },
+              "<=" => match (eval_next(), eval_next()) {
+                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs <= rhs),
+                _ => Expr::Nil,
+              },
 
-                "=" => Some(Expr::Bool(lhs == rhs)),
-                "!=" => Some(Expr::Bool(lhs != rhs)),
-                ">" => match (lhs, rhs) {
-                  (Expr::Num(lhs), Expr::Num(rhs)) => {
-                    Some(Expr::Bool(lhs > rhs))
-                  }
-                  _ => Some(Expr::Nil),
-                },
-                ">=" => match (lhs, rhs) {
-                  (Expr::Num(lhs), Expr::Num(rhs)) => {
-                    Some(Expr::Bool(lhs >= rhs))
-                  }
-                  _ => Some(Expr::Nil),
-                },
-                "<" => match (lhs, rhs) {
-                  (Expr::Num(lhs), Expr::Num(rhs)) => {
-                    Some(Expr::Bool(lhs < rhs))
-                  }
-                  _ => Some(Expr::Nil),
-                },
-                "<=" => match (lhs, rhs) {
-                  (Expr::Num(lhs), Expr::Num(rhs)) => {
-                    Some(Expr::Bool(lhs <= rhs))
-                  }
-                  _ => Some(Expr::Nil),
-                },
-
-                "str" => match (lhs, rhs) {
-                  (Expr::Str(lhs), Expr::Str(rhs)) => {
-                    Some(Expr::Str(lhs + &rhs))
-                  }
-                  _ => Some(Expr::Nil),
-                },
-                _ => todo!("Runtime functions not yet implemented {}", span),
-              }
-            }
+              "str" => match (eval_next(), eval_next()) {
+                (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),
+                _ => Expr::Nil,
+              },
+              _ => todo!("Runtime functions {}", span),
+            },
           },
-          first => Some(first.clone()),
+          first => first.clone(),
         }
       }
-      Expr::Symbol(name) => self.get_var(name).cloned(),
-      expr => Some(expr),
+      Expr::Symbol(name) => match self.get_var(name).cloned() {
+        Some(val) => val,
+        None => Expr::Symbol(name),
+      },
+      expr => expr,
     }
   }
 
   pub fn eval(&mut self, exprs: Vec<Expr<'a>>) -> Option<Expr<'a>> {
-    exprs
-      .into_iter()
-      .map(|expr| self.eval_expr(expr))
-      .last()
-      .unwrap()
+    exprs.into_iter().map(|expr| self.eval_expr(expr)).last()
   }
 }
 
