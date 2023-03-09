@@ -320,20 +320,41 @@ impl<'a> Program<'a> {
     Self {
       vars: HashMap::new(),
       fns: HashMap::new(),
-      built_ins: HashMap::from_iter([(
-        "def".to_string(),
-        BuiltinFunction {
-          args: HashSet::from_iter(["name".to_string(), "val".to_string()]),
-          r#fn: |prog, args| {
-            if let Expr::Symbol(name) = &args[0] {
-              if let Some(val) = args.get(1) {
-                prog.set_var(name.to_string(), val.clone());
+      built_ins: HashMap::from_iter([
+        (
+          "def".to_string(),
+          BuiltinFunction {
+            args: HashSet::from_iter(["name".to_string(), "val".to_string()]),
+            r#fn: |prog, args| {
+              let lhs = args[0].clone();
+              let rhs = prog.eval_expr(args[1].clone());
+
+              if let Expr::Symbol(name) = lhs {
+                if let Some(val) = rhs {
+                  prog.set_var(name.to_string(), val.clone());
+                }
               }
-            }
-            Expr::Nil
+
+              Expr::Nil
+            },
           },
-        },
-      )]),
+        ),
+        (
+          "+".to_string(),
+          BuiltinFunction {
+            args: HashSet::from_iter(["a".to_string(), "b".to_string()]),
+            r#fn: |prog, args| {
+              let lhs = prog.eval_expr(args[0].clone()).unwrap();
+              let rhs = prog.eval_expr(args[1].clone()).unwrap();
+
+              match (lhs, rhs) {
+                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs + rhs),
+                _ => Expr::Nil,
+              }
+            },
+          },
+        ),
+      ]),
     }
   }
 
@@ -366,22 +387,17 @@ impl<'a> Program<'a> {
     match expr {
       Expr::List(exprs) => {
         let mut iter = exprs.iter().map(|(expr, _)| expr);
-        let first = iter.next();
+        let fn_name = iter.next();
 
-        match first {
+        match fn_name {
           Some(Expr::Symbol(name)) => {
             if let Some(builtin) = self.get_builtin(name) {
-              let args = iter
-                .take(builtin.args.len())
-                .map(|arg| self.eval_expr(arg.clone()))
-                .collect::<Vec<_>>();
+              let mut args =
+                iter.take(builtin.args.len()).cloned().collect::<Vec<_>>();
 
               println!("Calling {:?} with {:?}", name, args);
 
-              Some((builtin.r#fn)(
-                self,
-                args.into_iter().map(|arg| arg.unwrap()).collect(),
-              ))
+              Some((builtin.r#fn)(self, args))
             } else {
               panic!("Unknown symbol: {}", name);
             }
@@ -389,6 +405,7 @@ impl<'a> Program<'a> {
           first => first.cloned(),
         }
       }
+      Expr::Symbol(name) => self.get_var(name).cloned(),
       expr => Some(expr),
     }
   }
@@ -403,7 +420,7 @@ impl<'a> Program<'a> {
 }
 
 fn main() {
-  const CODE: &str = "(def x 2)";
+  const CODE: &str = "(def x (+ (+ 2 2) 4))";
   let mut program = Program::new();
 
   let (tokens, errs) =
