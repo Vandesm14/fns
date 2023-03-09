@@ -1,14 +1,11 @@
 // use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
 use chumsky::{
-  container::{Container, Seq},
-  error::Error,
-  input::SpannedInput,
-  prelude::*,
+  container::Container, error::Error, input::SpannedInput, prelude::*,
   util::Maybe,
 };
 use std::{
   collections::{HashMap, HashSet},
-  fmt,
+  env, fmt, fs,
 };
 
 /*
@@ -34,6 +31,7 @@ use std::{
   Arithmetic: `(+ 1 2)` `(- 1 2)` `(* 1 2)` `(/ 1 2)`
   Comparison: `(= 1 2)` `(!= 1 2)` `(> 1 2)` `(>= 1 2)` `(< 1 2)` `(<= 1 2)`
   Arrays: `(def x [1 2 3])` `(get x 0)` `(set x 0 4)` `(len x)` `(push x 4)` `(pop x)`
+  Strings: `(explode "hello")` `(str "hello" "world")`
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -349,6 +347,7 @@ impl<'a> Program<'a> {
 
         match fn_name {
           Some(Expr::Symbol(name)) => match *name {
+            // Functions that are built into the language (starts with fns with weird args)
             "def" => {
               let name = iter.next().unwrap();
               let val = self.eval_expr(iter.next().unwrap().clone()).unwrap();
@@ -361,6 +360,8 @@ impl<'a> Program<'a> {
                 panic!("Expected symbol for name");
               }
             }
+
+            // Functions that are built into the language (fns with two args)
             _ => {
               let lhs = self.eval_expr(iter.next().unwrap().clone()).unwrap();
               let rhs = self.eval_expr(iter.next().unwrap().clone()).unwrap();
@@ -417,7 +418,7 @@ impl<'a> Program<'a> {
                   }
                   _ => Some(Expr::Nil),
                 },
-                _ => panic!("Unknown symbol: {}", name),
+                _ => todo!("Runtime functions not yet implemented"),
               }
             }
           },
@@ -491,15 +492,66 @@ fn test_equality() {
   let mut program = Program::new();
 
   let (result, _) = eval("(= 1 1)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(true)));
 
+  let (result, _) = eval("(= 1 2)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(false)));
+
+  let (result, _) = eval("(= true true)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(true)));
+
+  let (result, _) = eval("(= true false)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(false)));
+
+  let (result, _) = eval("(= \"foo\" \"foo\")", &mut program);
   assert_eq!(result, Some(Expr::Bool(true)));
 }
 
-fn main() {
+#[test]
+fn test_inequality() {
   let mut program = Program::new();
 
-  let (result, exprs) =
-    eval("(def a 1)\n(def b 2)\n(def c (* 2 (+ a b)))", &mut program);
+  let (result, _) = eval("(!= 1 1)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(false)));
+  let (result, _) = eval("(!= 1 2)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(true)));
+
+  let (result, _) = eval("(> 1 1)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(false)));
+  let (result, _) = eval("(> 1 2)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(false)));
+  let (result, _) = eval("(> 2 1)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(true)));
+
+  let (result, _) = eval("(>= 1 1)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(true)));
+  let (result, _) = eval("(>= 1 2)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(false)));
+  let (result, _) = eval("(>= 2 1)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(true)));
+
+  let (result, _) = eval("(< 1 1)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(false)));
+  let (result, _) = eval("(< 1 2)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(true)));
+  let (result, _) = eval("(< 2 1)", &mut program);
+
+  let (result, _) = eval("(<= 1 1)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(true)));
+  let (result, _) = eval("(<= 1 2)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(true)));
+  let (result, _) = eval("(<= 2 1)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(false)));
+}
+
+fn main() {
+  let src =
+    fs::read_to_string(env::args().nth(1).expect("Expected file argument"))
+      .expect("Failed to read file");
+
+  let mut program = Program::new();
+
+  let (result, exprs) = eval(&src, &mut program);
 
   println!("Exprs: {:?}", exprs);
   println!("Program: {:?}", program);
