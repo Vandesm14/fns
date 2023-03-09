@@ -1,3 +1,4 @@
+use ariadne::{sources, Color, Label, Report, ReportKind};
 use chumsky::{
   container::Container, error::Error, input::SpannedInput, prelude::*,
   util::Maybe,
@@ -177,7 +178,8 @@ where
           },
         )),
       )))
-      .ignored();
+      .ignored()
+      .boxed();
 
     none_of("\\\"")
       .ignored()
@@ -243,13 +245,15 @@ where
       .repeated()
       .collect()
       .delimited_by(just(Token::LParen), just(Token::RParen))
-      .map(Expr::List);
+      .map(Expr::List)
+      .boxed();
 
     let array = expr
       .repeated()
       .collect()
       .delimited_by(just(Token::LBracket), just(Token::RBracket))
-      .map(Expr::Array);
+      .map(Expr::Array)
+      .boxed();
 
     atom
       .or(list)
@@ -448,18 +452,15 @@ impl<'a> Program<'a> {
 fn eval<'a>(
   source: &'a str,
   program: &mut Program<'a>,
+  filename: String,
 ) -> (Option<Expr<'a>>, Vec<Spanned<Expr<'a>>>) {
   let (tokens, errs) = lexer::<Vec<_>, Rich<_>>()
     .parse(source)
     .into_output_errors();
 
-  errs.into_iter().for_each(|err| {
-    eprintln!("{}", err);
-  });
-
   let tokens = tokens.unwrap();
 
-  let (exprs, errs) = parser::<Vec<_>, Rich<_>>()
+  let (exprs, parse_errs) = parser::<Vec<_>, Rich<_>>()
     .parse(
       tokens
         .as_slice()
@@ -467,9 +468,26 @@ fn eval<'a>(
     )
     .into_output_errors();
 
-  errs.into_iter().for_each(|err| {
-    eprintln!("{}", err);
-  });
+  errs
+    .into_iter()
+    .map(|e| e.map_token(|c| c.to_string()))
+    .chain(
+      parse_errs
+        .into_iter()
+        .map(|e| e.map_token(|tok| tok.to_string())),
+    )
+    .for_each(|e| {
+      Report::build(ReportKind::Error, filename.clone(), e.span().start)
+        .with_message(e.to_string())
+        .with_label(
+          Label::new((filename.clone(), e.span().into_range()))
+            .with_message(e.reason().to_string())
+            .with_color(Color::Red),
+        )
+        .finish()
+        .eprint(sources([(filename.to_owned(), source.to_owned())]))
+        .unwrap()
+    });
 
   let exprs = exprs.unwrap();
 
@@ -479,12 +497,19 @@ fn eval<'a>(
   (result, exprs)
 }
 
+fn eval_in_mem<'a>(
+  source: &'a str,
+  program: &mut Program<'a>,
+) -> (Option<Expr<'a>>, Vec<Spanned<Expr<'a>>>) {
+  eval(source, program, file!().to_string())
+}
+
 #[test]
 fn test_def() {
   let mut program = Program::new();
 
   let (result, _) =
-    eval("(def a 1)\n(def b 2)\n(def c (* 2 (+ a b)))", &mut program);
+    eval_in_mem("(def a 1)\n(def b 2)\n(def c (* 2 (+ a b)))", &mut program);
 
   assert_eq!(result, Some(Expr::Num(6.0)));
   assert_eq!(program.vars.len(), 3);
@@ -497,19 +522,19 @@ fn test_def() {
 fn test_equality() {
   let mut program = Program::new();
 
-  let (result, _) = eval("(= 1 1)", &mut program);
+  let (result, _) = eval_in_mem("(= 1 1)", &mut program);
   assert_eq!(result, Some(Expr::Bool(true)));
 
-  let (result, _) = eval("(= 1 2)", &mut program);
+  let (result, _) = eval_in_mem("(= 1 2)", &mut program);
   assert_eq!(result, Some(Expr::Bool(false)));
 
-  let (result, _) = eval("(= true true)", &mut program);
+  let (result, _) = eval_in_mem("(= true true)", &mut program);
   assert_eq!(result, Some(Expr::Bool(true)));
 
-  let (result, _) = eval("(= true false)", &mut program);
+  let (result, _) = eval_in_mem("(= true false)", &mut program);
   assert_eq!(result, Some(Expr::Bool(false)));
 
-  let (result, _) = eval("(= \"foo\" \"foo\")", &mut program);
+  let (result, _) = eval_in_mem("(= \"foo\" \"foo\")", &mut program);
   assert_eq!(result, Some(Expr::Bool(true)));
 }
 
@@ -517,47 +542,47 @@ fn test_equality() {
 fn test_inequality() {
   let mut program = Program::new();
 
-  let (result, _) = eval("(!= 1 1)", &mut program);
+  let (result, _) = eval_in_mem("(!= 1 1)", &mut program);
   assert_eq!(result, Some(Expr::Bool(false)));
-  let (result, _) = eval("(!= 1 2)", &mut program);
+  let (result, _) = eval_in_mem("(!= 1 2)", &mut program);
   assert_eq!(result, Some(Expr::Bool(true)));
 
-  let (result, _) = eval("(> 1 1)", &mut program);
+  let (result, _) = eval_in_mem("(> 1 1)", &mut program);
   assert_eq!(result, Some(Expr::Bool(false)));
-  let (result, _) = eval("(> 1 2)", &mut program);
+  let (result, _) = eval_in_mem("(> 1 2)", &mut program);
   assert_eq!(result, Some(Expr::Bool(false)));
-  let (result, _) = eval("(> 2 1)", &mut program);
+  let (result, _) = eval_in_mem("(> 2 1)", &mut program);
   assert_eq!(result, Some(Expr::Bool(true)));
 
-  let (result, _) = eval("(>= 1 1)", &mut program);
+  let (result, _) = eval_in_mem("(>= 1 1)", &mut program);
   assert_eq!(result, Some(Expr::Bool(true)));
-  let (result, _) = eval("(>= 1 2)", &mut program);
+  let (result, _) = eval_in_mem("(>= 1 2)", &mut program);
   assert_eq!(result, Some(Expr::Bool(false)));
-  let (result, _) = eval("(>= 2 1)", &mut program);
+  let (result, _) = eval_in_mem("(>= 2 1)", &mut program);
   assert_eq!(result, Some(Expr::Bool(true)));
 
-  let (result, _) = eval("(< 1 1)", &mut program);
+  let (result, _) = eval_in_mem("(< 1 1)", &mut program);
   assert_eq!(result, Some(Expr::Bool(false)));
-  let (result, _) = eval("(< 1 2)", &mut program);
+  let (result, _) = eval_in_mem("(< 1 2)", &mut program);
   assert_eq!(result, Some(Expr::Bool(true)));
-  let (result, _) = eval("(< 2 1)", &mut program);
+  let (result, _) = eval_in_mem("(< 2 1)", &mut program);
+  assert_eq!(result, Some(Expr::Bool(false)));
 
-  let (result, _) = eval("(<= 1 1)", &mut program);
+  let (result, _) = eval_in_mem("(<= 1 1)", &mut program);
   assert_eq!(result, Some(Expr::Bool(true)));
-  let (result, _) = eval("(<= 1 2)", &mut program);
+  let (result, _) = eval_in_mem("(<= 1 2)", &mut program);
   assert_eq!(result, Some(Expr::Bool(true)));
-  let (result, _) = eval("(<= 2 1)", &mut program);
+  let (result, _) = eval_in_mem("(<= 2 1)", &mut program);
   assert_eq!(result, Some(Expr::Bool(false)));
 }
 
 fn main() {
-  let src =
-    fs::read_to_string(env::args().nth(1).expect("Expected file argument"))
-      .expect("Failed to read file");
+  let filename = env::args().nth(1).expect("Expected file argument");
+  let src = fs::read_to_string(&filename).expect("Failed to read file");
 
   let mut program = Program::new();
 
-  let (result, exprs) = eval(&src, &mut program);
+  let (result, exprs) = eval(&src, &mut program, filename);
 
   println!("Exprs: {:?}", exprs);
   println!("Program: {:?}", program);
