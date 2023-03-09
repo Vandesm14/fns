@@ -1,4 +1,3 @@
-// use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
 use chumsky::{
   container::Container, error::Error, input::SpannedInput, prelude::*,
   util::Maybe,
@@ -70,7 +69,7 @@ enum Expr<'a> {
   Nil,
   Bool(bool),
   Num(f64),
-  Str(&'a str),
+  Str(String),
   Symbol(&'a str),
   List(Vec<Spanned<Self>>),
   Array(Vec<Spanned<Self>>),
@@ -235,7 +234,7 @@ where
       Token::Nil => Expr::Nil,
       Token::Bool(b) => Expr::Bool(b),
       Token::Num(n) => Expr::Num(n),
-      Token::Str(s) => Expr::Str(s),
+      Token::Str(s) => Expr::Str(s.to_string()),
       Token::Symbol(s) => Expr::Symbol(s),
     };
 
@@ -342,29 +341,29 @@ impl<'a> Program<'a> {
   fn eval_expr(&mut self, expr: Expr<'a>) -> Option<Expr<'a>> {
     match expr {
       Expr::List(exprs) => {
-        let mut iter = exprs.iter().map(|(expr, _)| expr);
-        let fn_name = iter.next();
+        let mut iter = exprs.iter();
+        let (fn_name, span) = iter.next().unwrap();
 
         match fn_name {
-          Some(Expr::Symbol(name)) => match *name {
+          Expr::Symbol(name) => match *name {
             // Functions that are built into the language (starts with fns with weird args)
             "def" => {
-              let name = iter.next().unwrap();
-              let val = self.eval_expr(iter.next().unwrap().clone()).unwrap();
+              let name = iter.next().unwrap().0.clone();
+              let val = self.eval_expr(iter.next().unwrap().0.clone()).unwrap();
 
               if let Expr::Symbol(name) = name {
                 self.set_var(name.to_string(), val.clone());
 
                 Some(val)
               } else {
-                panic!("Expected symbol for name");
+                panic!("Expected symbol for name {}", span);
               }
             }
 
             // Functions that are built into the language (fns with two args)
             _ => {
-              let lhs = self.eval_expr(iter.next().unwrap().clone()).unwrap();
-              let rhs = self.eval_expr(iter.next().unwrap().clone()).unwrap();
+              let lhs = self.eval_expr(iter.next().unwrap().0.clone()).unwrap();
+              let rhs = self.eval_expr(iter.next().unwrap().0.clone()).unwrap();
 
               match *name {
                 "+" => match (lhs, rhs) {
@@ -418,11 +417,18 @@ impl<'a> Program<'a> {
                   }
                   _ => Some(Expr::Nil),
                 },
-                _ => todo!("Runtime functions not yet implemented"),
+
+                "str" => match (lhs, rhs) {
+                  (Expr::Str(lhs), Expr::Str(rhs)) => {
+                    Some(Expr::Str(lhs + &rhs))
+                  }
+                  _ => Some(Expr::Nil),
+                },
+                _ => todo!("Runtime functions not yet implemented {}", span),
               }
             }
           },
-          first => first.cloned(),
+          first => Some(first.clone()),
         }
       }
       Expr::Symbol(name) => self.get_var(name).cloned(),
