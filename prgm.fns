@@ -1,4 +1,4 @@
 (def hello "hello")
-(def world "world)
+(def world "world")
 
 (def hello-world (str (str hello " ") world))
