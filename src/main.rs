@@ -1,6 +1,9 @@
 // use ariadne::{Color, Fmt, Label, Report, ReportKind, Source};
 use chumsky::{
-  container::Container, error::Error, input::SpannedInput, prelude::*,
+  container::{Container, Seq},
+  error::Error,
+  input::SpannedInput,
+  prelude::*,
   util::Maybe,
 };
 use std::{
@@ -25,11 +28,11 @@ use std::{
 
   Variables: `(def x 2)` (use `def` to re-assign a variable)
   Functions: `(defn add [x y] (+ x y))`
-  Conditionals: `(if (eq x 2)) "x is 2" "x is not 2")` `(if (eq x 2) "x is 2")`
+  Conditionals: `(if (= x 2)) "x is 2" "x is not 2")` `(if (= x 2) "x is 2")`
   Loops: `(while (lt x 10) (println x) (set x (+ x 1)))`
 
   Arithmetic: `(+ 1 2)` `(- 1 2)` `(* 1 2)` `(/ 1 2)`
-  Comparison: `(eq 1 2)` `(neq 1 2)` `(gt 1 2)` `(gte 1 2)` `(lt 1 2)` `(lte 1 2)`
+  Comparison: `(= 1 2)` `(!= 1 2)` `(> 1 2)` `(>= 1 2)` `(< 1 2)` `(<= 1 2)`
   Arrays: `(def x [1 2 3])` `(get x 0)` `(set x 0 4)` `(len x)` `(push x 4)` `(pop x)`
 */
 
@@ -191,7 +194,8 @@ where
   // A parser for Symbols
   let symbol = any()
     .filter(|ch: &char| {
-      ch.is_alphabetic() || ch.is_ascii_graphic() || ch.is_ascii_punctuation()
+      (ch.is_alphabetic() || ch.is_ascii_graphic() || ch.is_ascii_punctuation())
+        && !"()".contains(*ch)
     })
     .repeated()
     .at_least(1)
@@ -279,17 +283,10 @@ struct Function<'a> {
   args: HashSet<String>,
 }
 
-#[derive(Clone)]
-struct BuiltinFunction<'a> {
-  r#fn: fn(&mut Program<'a>, Vec<Expr<'a>>) -> Expr<'a>,
-  args: HashSet<String>,
-}
-
 #[derive(Default)]
 struct Program<'a> {
   vars: HashMap<String, Expr<'a>>,
   fns: HashMap<String, Function<'a>>,
-  built_ins: HashMap<String, BuiltinFunction<'a>>,
 }
 
 impl fmt::Debug for Program<'_> {
@@ -320,41 +317,6 @@ impl<'a> Program<'a> {
     Self {
       vars: HashMap::new(),
       fns: HashMap::new(),
-      built_ins: HashMap::from_iter([
-        (
-          "def".to_string(),
-          BuiltinFunction {
-            args: HashSet::from_iter(["name".to_string(), "val".to_string()]),
-            r#fn: |prog, args| {
-              let lhs = args[0].clone();
-              let rhs = prog.eval_expr(args[1].clone());
-
-              if let Expr::Symbol(name) = lhs {
-                if let Some(val) = rhs {
-                  prog.set_var(name.to_string(), val.clone());
-                }
-              }
-
-              Expr::Nil
-            },
-          },
-        ),
-        (
-          "+".to_string(),
-          BuiltinFunction {
-            args: HashSet::from_iter(["a".to_string(), "b".to_string()]),
-            r#fn: |prog, args| {
-              let lhs = prog.eval_expr(args[0].clone()).unwrap();
-              let rhs = prog.eval_expr(args[1].clone()).unwrap();
-
-              match (lhs, rhs) {
-                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs + rhs),
-                _ => Expr::Nil,
-              }
-            },
-          },
-        ),
-      ]),
     }
   }
 
@@ -379,10 +341,6 @@ impl<'a> Program<'a> {
     self.fns.get(name)
   }
 
-  fn get_builtin(&self, name: &str) -> Option<BuiltinFunction<'a>> {
-    self.built_ins.get(name).cloned()
-  }
-
   fn eval_expr(&mut self, expr: Expr<'a>) -> Option<Expr<'a>> {
     match expr {
       Expr::List(exprs) => {
@@ -390,18 +348,79 @@ impl<'a> Program<'a> {
         let fn_name = iter.next();
 
         match fn_name {
-          Some(Expr::Symbol(name)) => {
-            if let Some(builtin) = self.get_builtin(name) {
-              let mut args =
-                iter.take(builtin.args.len()).cloned().collect::<Vec<_>>();
+          Some(Expr::Symbol(name)) => match *name {
+            "def" => {
+              let name = iter.next().unwrap();
+              let val = self.eval_expr(iter.next().unwrap().clone()).unwrap();
 
-              println!("Calling {:?} with {:?}", name, args);
+              if let Expr::Symbol(name) = name {
+                self.set_var(name.to_string(), val.clone());
 
-              Some((builtin.r#fn)(self, args))
-            } else {
-              panic!("Unknown symbol: {}", name);
+                Some(val)
+              } else {
+                panic!("Expected symbol for name");
+              }
             }
-          }
+            _ => {
+              let lhs = self.eval_expr(iter.next().unwrap().clone()).unwrap();
+              let rhs = self.eval_expr(iter.next().unwrap().clone()).unwrap();
+
+              match *name {
+                "+" => match (lhs, rhs) {
+                  (Expr::Num(lhs), Expr::Num(rhs)) => {
+                    Some(Expr::Num(lhs + rhs))
+                  }
+                  _ => Some(Expr::Nil),
+                },
+                "-" => match (lhs, rhs) {
+                  (Expr::Num(lhs), Expr::Num(rhs)) => {
+                    Some(Expr::Num(lhs - rhs))
+                  }
+                  _ => Some(Expr::Nil),
+                },
+                "*" => match (lhs, rhs) {
+                  (Expr::Num(lhs), Expr::Num(rhs)) => {
+                    Some(Expr::Num(lhs * rhs))
+                  }
+                  _ => Some(Expr::Nil),
+                },
+                "/" => match (lhs, rhs) {
+                  (Expr::Num(lhs), Expr::Num(rhs)) => {
+                    Some(Expr::Num(lhs / rhs))
+                  }
+                  _ => Some(Expr::Nil),
+                },
+
+                "=" => Some(Expr::Bool(lhs == rhs)),
+                "!=" => Some(Expr::Bool(lhs != rhs)),
+                ">" => match (lhs, rhs) {
+                  (Expr::Num(lhs), Expr::Num(rhs)) => {
+                    Some(Expr::Bool(lhs > rhs))
+                  }
+                  _ => Some(Expr::Nil),
+                },
+                ">=" => match (lhs, rhs) {
+                  (Expr::Num(lhs), Expr::Num(rhs)) => {
+                    Some(Expr::Bool(lhs >= rhs))
+                  }
+                  _ => Some(Expr::Nil),
+                },
+                "<" => match (lhs, rhs) {
+                  (Expr::Num(lhs), Expr::Num(rhs)) => {
+                    Some(Expr::Bool(lhs < rhs))
+                  }
+                  _ => Some(Expr::Nil),
+                },
+                "<=" => match (lhs, rhs) {
+                  (Expr::Num(lhs), Expr::Num(rhs)) => {
+                    Some(Expr::Bool(lhs <= rhs))
+                  }
+                  _ => Some(Expr::Nil),
+                },
+                _ => panic!("Unknown symbol: {}", name),
+              }
+            }
+          },
           first => first.cloned(),
         }
       }
@@ -419,12 +438,13 @@ impl<'a> Program<'a> {
   }
 }
 
-fn main() {
-  const CODE: &str = "(def x (+ (+ 2 2) 4))";
-  let mut program = Program::new();
-
-  let (tokens, errs) =
-    lexer::<Vec<_>, Rich<_>>().parse(CODE).into_output_errors();
+fn eval<'a>(
+  source: &'a str,
+  program: &mut Program<'a>,
+) -> (Option<Expr<'a>>, Vec<Spanned<Expr<'a>>>) {
+  let (tokens, errs) = lexer::<Vec<_>, Rich<_>>()
+    .parse(source)
+    .into_output_errors();
 
   errs.into_iter().for_each(|err| {
     eprintln!("{}", err);
@@ -433,7 +453,11 @@ fn main() {
   let tokens = tokens.unwrap();
 
   let (exprs, errs) = parser::<Vec<_>, Rich<_>>()
-    .parse(tokens.as_slice().spanned((CODE.len()..CODE.len()).into()))
+    .parse(
+      tokens
+        .as_slice()
+        .spanned((source.len()..source.len()).into()),
+    )
     .into_output_errors();
 
   errs.into_iter().for_each(|err| {
@@ -442,9 +466,42 @@ fn main() {
 
   let exprs = exprs.unwrap();
 
+  let result =
+    program.eval(exprs.clone().into_iter().map(|(tok, _)| tok).collect());
+
+  (result, exprs)
+}
+
+#[test]
+fn test_def() {
+  let mut program = Program::new();
+
+  let (result, _) =
+    eval("(def a 1)\n(def b 2)\n(def c (* 2 (+ a b)))", &mut program);
+
+  assert_eq!(result, Some(Expr::Num(6.0)));
+  assert_eq!(program.vars.len(), 3);
+  assert_eq!(program.vars.get("a"), Some(&Expr::Num(1.0)));
+  assert_eq!(program.vars.get("b"), Some(&Expr::Num(2.0)));
+  assert_eq!(program.vars.get("c"), Some(&Expr::Num(6.0)));
+}
+
+#[test]
+fn test_equality() {
+  let mut program = Program::new();
+
+  let (result, _) = eval("(= 1 1)", &mut program);
+
+  assert_eq!(result, Some(Expr::Bool(true)));
+}
+
+fn main() {
+  let mut program = Program::new();
+
+  let (result, exprs) =
+    eval("(def a 1)\n(def b 2)\n(def c (* 2 (+ a b)))", &mut program);
+
   println!("Exprs: {:?}", exprs);
-
-  program.eval(exprs.into_iter().map(|(tok, _)| tok).collect());
-
   println!("Program: {:?}", program);
+  println!("Result: {:?}", result);
 }
