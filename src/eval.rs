@@ -56,7 +56,7 @@ impl<'a> Program<'a> {
     self.vars.insert(name, val);
   }
 
-  fn get_var(&self, name: &str) -> Option<&Expr<'a>> {
+  fn var(&self, name: &str) -> Option<&Expr<'a>> {
     self.vars.get(name)
   }
 
@@ -64,7 +64,7 @@ impl<'a> Program<'a> {
     self.fns.insert(name, Function { expr, args });
   }
 
-  fn get_fn(&self, name: &str) -> Option<&Function<'a>> {
+  fn r#fn(&self, name: &str) -> Option<&Function<'a>> {
     self.fns.get(name)
   }
 
@@ -163,7 +163,7 @@ impl<'a> Program<'a> {
               _ => Expr::Nil,
             },
             _ => {
-              let r#fn = self.get_fn(name).cloned();
+              let r#fn = self.r#fn(name).cloned();
 
               match r#fn {
                 Some(r#fn) => {
@@ -185,7 +185,7 @@ impl<'a> Program<'a> {
           first => first.clone(),
         }
       }
-      Expr::Symbol(name) => match self.get_var(name).cloned() {
+      Expr::Symbol(name) => match self.var(name).cloned() {
         Some(val) => val,
         None => Expr::Symbol(name),
       },
