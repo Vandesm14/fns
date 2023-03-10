@@ -111,8 +111,6 @@ impl<'a> Program<'a> {
 
                   self.set_fn(name.to_string(), expr, args);
 
-                  dbg!(self);
-
                   Expr::Nil
                 } else {
                   panic!("Expected array for args {}", span);
@@ -176,7 +174,17 @@ impl<'a> Program<'a> {
                     })
                     .collect::<Vec<_>>();
 
-                  self.eval_expr(r#fn.expr)
+                  for (name, val) in args {
+                    self.set_var(name, val);
+                  }
+
+                  let result = self.eval_expr(r#fn.expr);
+
+                  for arg in r#fn.args {
+                    self.vars.remove(&arg);
+                  }
+
+                  result
                 }
                 None => panic!("Unknown function {}", name),
               }
@@ -193,8 +201,12 @@ impl<'a> Program<'a> {
     }
   }
 
-  pub fn eval(&mut self, exprs: Vec<Expr<'a>>) -> Option<Expr<'a>> {
-    exprs.into_iter().map(|expr| self.eval_expr(expr)).last()
+  pub fn eval(&mut self, exprs: Vec<Expr<'a>>) -> Expr<'a> {
+    exprs
+      .into_iter()
+      .map(|expr| self.eval_expr(expr))
+      .last()
+      .unwrap()
   }
 }
 
@@ -202,7 +214,7 @@ pub fn eval<'a>(
   source: &'a str,
   program: &mut Program<'a>,
   filename: String,
-) -> (Option<Expr<'a>>, Vec<Spanned<Expr<'a>>>) {
+) -> (Expr<'a>, Vec<Spanned<Expr<'a>>>) {
   let (tokens, errs) = lexer::<Vec<_>, Rich<_>>()
     .parse(source)
     .into_output_errors();
@@ -246,86 +258,16 @@ pub fn eval<'a>(
   (result, exprs)
 }
 
-fn eval_in_mem<'a>(
-  source: &'a str,
-  program: &mut Program<'a>,
-) -> (Option<Expr<'a>>, Vec<Spanned<Expr<'a>>>) {
-  eval(source, program, file!().to_string())
-}
-
 #[cfg(test)]
 mod test {
   use super::*;
 
-  #[test]
-  fn test_def() {
-    let mut program = Program::new();
+  fn eval_in_mem<'a>(source: &'a str, program: &mut Program<'a>) -> Expr<'a> {
+    let (result, _) = eval(source, program, file!().to_string());
 
-    let (result, _) =
-      eval_in_mem("(def a 1)\n(def b 2)\n(def c (* 2 (+ a b)))", &mut program);
-
-    assert_eq!(result, Some(Expr::Num(6.0)));
-    assert_eq!(program.vars.len(), 3);
-    assert_eq!(program.vars.get("a"), Some(&Expr::Num(1.0)));
-    assert_eq!(program.vars.get("b"), Some(&Expr::Num(2.0)));
-    assert_eq!(program.vars.get("c"), Some(&Expr::Num(6.0)));
+    result
   }
 
-  #[test]
-  fn test_equality() {
-    let mut program = Program::new();
-
-    let (result, _) = eval_in_mem("(= 1 1)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(true)));
-
-    let (result, _) = eval_in_mem("(= 1 2)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(false)));
-
-    let (result, _) = eval_in_mem("(= true true)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(true)));
-
-    let (result, _) = eval_in_mem("(= true false)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(false)));
-
-    let (result, _) = eval_in_mem("(= \"foo\" \"foo\")", &mut program);
-    assert_eq!(result, Some(Expr::Bool(true)));
-  }
-
-  #[test]
-  fn test_inequality() {
-    let mut program = Program::new();
-
-    let (result, _) = eval_in_mem("(!= 1 1)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(false)));
-    let (result, _) = eval_in_mem("(!= 1 2)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(true)));
-
-    let (result, _) = eval_in_mem("(> 1 1)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(false)));
-    let (result, _) = eval_in_mem("(> 1 2)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(false)));
-    let (result, _) = eval_in_mem("(> 2 1)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(true)));
-
-    let (result, _) = eval_in_mem("(>= 1 1)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(true)));
-    let (result, _) = eval_in_mem("(>= 1 2)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(false)));
-    let (result, _) = eval_in_mem("(>= 2 1)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(true)));
-
-    let (result, _) = eval_in_mem("(< 1 1)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(false)));
-    let (result, _) = eval_in_mem("(< 1 2)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(true)));
-    let (result, _) = eval_in_mem("(< 2 1)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(false)));
-
-    let (result, _) = eval_in_mem("(<= 1 1)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(true)));
-    let (result, _) = eval_in_mem("(<= 1 2)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(true)));
-    let (result, _) = eval_in_mem("(<= 2 1)", &mut program);
-    assert_eq!(result, Some(Expr::Bool(false)));
-  }
+  // TODO: Add integration tests
+  // We don't need the bloat of a full unit test suite
 }

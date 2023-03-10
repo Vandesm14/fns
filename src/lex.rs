@@ -111,13 +111,25 @@ where
   };
 
   // A parser for Symbols
+  // let symbol = any()
+  //   .filter(|ch: &char| {
+  //     (ch.is_alphabetic() || ch.is_ascii_graphic() || ch.is_ascii_punctuation())
+  //       && !"()[]\"".contains(*ch)
+  //   })
+  //   .repeated()
+  //   .at_least(1)
+  //   .slice()
+  //   .map(Token::Symbol);
+
+  const SYMBOL_CHARS: &str = "_.+-*/=<>!";
+
   let symbol = any()
-    .filter(|ch: &char| {
-      (ch.is_alphabetic() || ch.is_ascii_graphic() || ch.is_ascii_punctuation())
-        && !"()\"".contains(*ch)
-    })
-    .repeated()
-    .at_least(1)
+    .filter(|&ch: &char| ch.is_alphabetic() || SYMBOL_CHARS.contains(ch))
+    .then(
+      any()
+        .filter(|&ch: &char| ch.is_alphanumeric() || SYMBOL_CHARS.contains(ch))
+        .repeated(),
+    )
     .slice()
     .map(Token::Symbol);
 
