@@ -9,9 +9,9 @@ use crate::{
   Spanned,
 };
 
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Function<'a> {
-  expr: Vec<Token<'a>>,
+  expr: Expr<'a>,
   args: HashSet<String>,
 }
 
@@ -60,12 +60,7 @@ impl<'a> Program<'a> {
     self.vars.get(name)
   }
 
-  fn set_fn(
-    &mut self,
-    name: String,
-    expr: Vec<Token<'a>>,
-    args: HashSet<String>,
-  ) {
+  fn set_fn(&mut self, name: String, expr: Expr<'a>, args: HashSet<String>) {
     self.fns.insert(name, Function { expr, args });
   }
 
@@ -79,8 +74,7 @@ impl<'a> Program<'a> {
         let mut iter = exprs.iter();
         let (fn_name, span) = iter.next().unwrap();
 
-        let mut next_arg = || iter.next().unwrap().0.clone();
-        let mut eval_next = || self.eval_expr(next_arg());
+        let mut eval_next = || self.eval_expr(iter.next().unwrap().0.clone());
 
         match fn_name {
           Expr::Symbol(name) => match *name {
@@ -97,51 +91,96 @@ impl<'a> Program<'a> {
                 panic!("Expected symbol for name {}", span);
               }
             }
+            "defn" => {
+              let name = iter.next().unwrap().0.clone();
+              let args = iter.next().unwrap().0.clone();
+              let expr = iter.next().unwrap().0.clone();
 
-            // Functions that are built into the language (fns with two args)
-            _ => match *name {
-              "+" => match (eval_next(), eval_next()) {
-                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs + rhs),
-                _ => Expr::Nil,
-              },
-              "-" => match (eval_next(), eval_next()) {
-                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs - rhs),
-                _ => Expr::Nil,
-              },
-              "*" => match (eval_next(), eval_next()) {
-                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs * rhs),
-                _ => Expr::Nil,
-              },
-              "/" => match (eval_next(), eval_next()) {
-                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs / rhs),
-                _ => Expr::Nil,
-              },
+              if let Expr::Symbol(name) = name {
+                if let Expr::Array(args) = args {
+                  let args = args
+                    .into_iter()
+                    .map(|(arg, _)| {
+                      if let Expr::Symbol(arg) = arg {
+                        arg.to_string()
+                      } else {
+                        panic!("Expected symbol for arg {}", span);
+                      }
+                    })
+                    .collect();
 
-              "=" => Expr::Bool(eval_next() == eval_next()),
-              "!=" => Expr::Bool(eval_next() != eval_next()),
-              ">" => match (eval_next(), eval_next()) {
-                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs > rhs),
-                _ => Expr::Nil,
-              },
-              ">=" => match (eval_next(), eval_next()) {
-                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs >= rhs),
-                _ => Expr::Nil,
-              },
-              "<" => match (eval_next(), eval_next()) {
-                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs < rhs),
-                _ => Expr::Nil,
-              },
-              "<=" => match (eval_next(), eval_next()) {
-                (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs <= rhs),
-                _ => Expr::Nil,
-              },
+                  self.set_fn(name.to_string(), expr, args);
 
-              "str" => match (eval_next(), eval_next()) {
-                (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),
-                _ => Expr::Nil,
-              },
-              _ => todo!("Runtime functions {}", span),
+                  dbg!(self);
+
+                  Expr::Nil
+                } else {
+                  panic!("Expected array for args {}", span);
+                }
+              } else {
+                panic!("Expected symbol for name {}", span);
+              }
+            }
+
+            "+" => match (eval_next(), eval_next()) {
+              (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs + rhs),
+              _ => Expr::Nil,
             },
+            "-" => match (eval_next(), eval_next()) {
+              (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs - rhs),
+              _ => Expr::Nil,
+            },
+            "*" => match (eval_next(), eval_next()) {
+              (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs * rhs),
+              _ => Expr::Nil,
+            },
+            "/" => match (eval_next(), eval_next()) {
+              (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs / rhs),
+              _ => Expr::Nil,
+            },
+
+            "=" => Expr::Bool(eval_next() == eval_next()),
+            "!=" => Expr::Bool(eval_next() != eval_next()),
+            ">" => match (eval_next(), eval_next()) {
+              (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs > rhs),
+              _ => Expr::Nil,
+            },
+            ">=" => match (eval_next(), eval_next()) {
+              (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs >= rhs),
+              _ => Expr::Nil,
+            },
+            "<" => match (eval_next(), eval_next()) {
+              (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs < rhs),
+              _ => Expr::Nil,
+            },
+            "<=" => match (eval_next(), eval_next()) {
+              (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs <= rhs),
+              _ => Expr::Nil,
+            },
+
+            "str" => match (eval_next(), eval_next()) {
+              (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),
+              _ => Expr::Nil,
+            },
+            _ => {
+              let r#fn = self.get_fn(name).cloned();
+
+              match r#fn {
+                Some(r#fn) => {
+                  let args = r#fn
+                    .args
+                    .clone()
+                    .into_iter()
+                    .map(|arg| {
+                      (arg, self.eval_expr(iter.next().unwrap().0.clone()))
+                    })
+                    .collect::<Vec<_>>();
+
+                  self.eval_expr(r#fn.expr)
+                }
+                None => panic!("Unknown function {}", name),
+              }
+            }
           },
           first => first.clone(),
         }
