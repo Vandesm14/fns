@@ -11,6 +11,6 @@ fn main() {
   let (result, exprs) = eval(&src, &mut program, filename);
 
   // println!("Exprs: {:?}", exprs);
-  println!("Program: {:?}", program);
+  // println!("Program: {:?}", program);
   println!("Result: {:?}", result);
 }

@@ -1,10 +1,10 @@
-use ariadne::{sources, Color, Label, Report, ReportKind, Span};
+use ariadne::{sources, Color, Label, Report, ReportKind};
 use chumsky::prelude::*;
 use core::fmt;
 use std::collections::{HashMap, HashSet};
 
 use crate::{
-  lex::{lexer, Token},
+  lex::lexer,
   parse::{parser, Expr},
   Spanned,
 };
@@ -136,14 +136,28 @@ impl<'a> Program<'a> {
                   iter.map(|expr| expr.0.clone()).collect::<Vec<Expr>>();
 
                 while let Expr::Bool(true) = self.eval_expr(lhs.clone()) {
+                  let mut has_broken = false;
+
                   while_body.iter().for_each(|expr| {
-                    self.eval_expr(expr.clone());
+                    let result = self.eval_expr(expr.clone());
+
+                    if let Expr::Break = result {
+                      has_broken = true;
+                    }
                   });
+
+                  if has_broken {
+                    break;
+                  }
                 }
 
                 Expr::Nil
               }
               _ => Expr::Nil,
+            },
+            "break" => match iter.next() {
+              Some(_) => panic!("break does not take any arguments {}", span),
+              None => Expr::Break,
             },
 
             // Arithmetic

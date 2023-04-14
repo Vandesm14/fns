@@ -14,6 +14,7 @@ pub enum Expr<'a> {
   Symbol(&'a str),
   List(Vec<Spanned<Self>>),
   Array(Vec<Spanned<Self>>),
+  Break,
   Error,
 }
 
@@ -45,6 +46,7 @@ impl<'a> fmt::Display for Expr<'a> {
         }
         write!(f, "]")
       }
+      Expr::Break => write!(f, "break"),
       Expr::Error => write!(f, "error"),
     }
   }
