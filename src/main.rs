@@ -8,7 +8,7 @@ fn main() {
 
   let mut program = Program::new();
 
-  let (result, exprs) = eval(&src, &mut program, filename);
+  let (result, _exprs) = eval(&src, &mut program, filename);
 
   // println!("Exprs: {:?}", exprs);
   // println!("Program: {:?}", program);

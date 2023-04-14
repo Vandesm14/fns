@@ -121,42 +121,40 @@ impl<'a> Program<'a> {
             }
 
             // Loops
-            "while" => match iter.next().unwrap().0.clone() {
-              lhs => {
-                let initial_bool = match self.eval_expr(lhs.clone()) {
-                  Expr::Bool(b) => b,
-                  _ => panic!("Expected bool for while condition {}", span),
-                };
+            "while" => {
+              let lhs = iter.next().unwrap().0.clone();
+              let initial_bool = match self.eval_expr(lhs.clone()) {
+                Expr::Bool(b) => b,
+                _ => panic!("Expected bool for while condition {}", span),
+              };
 
-                if !initial_bool {
-                  return Expr::Nil;
-                }
-
-                let while_body =
-                  iter.map(|expr| expr.0.clone()).collect::<Vec<Expr>>();
-
-                while let Expr::Bool(true) = self.eval_expr(lhs.clone()) {
-                  let mut has_broken = false;
-
-                  while_body.iter().for_each(|expr| {
-                    if !has_broken {
-                      let result = self.eval_expr(expr.clone());
-
-                      if let Expr::Break = result {
-                        has_broken = true;
-                      }
-                    };
-                  });
-
-                  if has_broken {
-                    break;
-                  }
-                }
-
-                Expr::Nil
+              if !initial_bool {
+                return Expr::Nil;
               }
-              _ => Expr::Nil,
-            },
+
+              let while_body =
+                iter.map(|expr| expr.0.clone()).collect::<Vec<Expr>>();
+
+              while let Expr::Bool(true) = self.eval_expr(lhs.clone()) {
+                let mut has_broken = false;
+
+                while_body.iter().for_each(|expr| {
+                  if !has_broken {
+                    let result = self.eval_expr(expr.clone());
+
+                    if let Expr::Break = result {
+                      has_broken = true;
+                    }
+                  };
+                });
+
+                if has_broken {
+                  break;
+                }
+              }
+
+              Expr::Nil
+            }
             "break" => match iter.next() {
               Some(_) => panic!("break does not take any arguments {}", span),
               None => Expr::Break,
@@ -205,21 +203,19 @@ impl<'a> Program<'a> {
             },
 
             // Strings
-            "str" => match eval_next() {
-              lhs => {
-                let mut lhs = lhs.to_string();
-                let rhs = iter
-                  .map(|expr| self.eval_expr(expr.0.clone()))
-                  .collect::<Vec<Expr>>();
+            "str" => {
+              let lhs = eval_next();
+              let mut lhs = lhs.to_string();
+              let rhs = iter
+                .map(|expr| self.eval_expr(expr.0.clone()))
+                .collect::<Vec<Expr>>();
 
-                rhs.iter().for_each(|expr| {
-                  lhs.push_str(&expr.to_string());
-                });
+              rhs.iter().for_each(|expr| {
+                lhs.push_str(&expr.to_string());
+              });
 
-                Expr::Str(lhs)
-              }
-              _ => Expr::Nil,
-            },
+              Expr::Str(lhs)
+            }
             "explode" => match eval_next() {
               Expr::Str(lhs) => Expr::Array(
                 lhs
@@ -334,18 +330,4 @@ pub fn eval<'a>(
     program.eval(exprs.clone().into_iter().map(|(tok, _)| tok).collect());
 
   (result, exprs)
-}
-
-#[cfg(test)]
-mod test {
-  use super::*;
-
-  fn eval_in_mem<'a>(source: &'a str, program: &mut Program<'a>) -> Expr<'a> {
-    let (result, _) = eval(source, program, file!().to_string());
-
-    result
-  }
-
-  // TODO: Add integration tests
-  // We don't need the bloat of a full unit test suite
 }
