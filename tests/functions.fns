@@ -1,0 +1,5 @@
+(def hello "Hello")
+
+(defn greet [name] (str hello ", " name))
+
+(greet "Shane")

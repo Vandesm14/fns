@@ -1,0 +1,8 @@
+(def hello "Hello")
+(def world "world")
+
+(println (str hello ", " world "!"))
+
+(def hello "Goodbye")
+
+(println (str hello ", " world "!"))
