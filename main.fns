@@ -3,4 +3,5 @@
 
 (defn greet [world] (str (str hello " ") world))
 
-(greet "leon")
+(explode (greet "leon"))
+
