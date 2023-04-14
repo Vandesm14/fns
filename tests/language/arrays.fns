@@ -1,0 +1,5 @@
+(def array [1 2 3 4])
+(def array2 [1 "2" true nil])
+
+(print array)
+(print array2)

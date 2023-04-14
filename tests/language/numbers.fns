@@ -1,0 +1,6 @@
+(def one 1)
+(def one-dot-zero 1.0)
+(def neg-one -1)
+(def neg-one-dot-zero -1.0)
+
+(print (str one ", " one-dot-zero ", " neg-one ", " neg-one-dot-zero))

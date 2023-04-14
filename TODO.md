@@ -2,13 +2,19 @@
 
 ## Language
 
-- [ ] Expressions: `(...)`
-- [ ] Lists/Arrays/Sequences: `[...]`
-- [ ] Strings: `"..."`
-- [ ] Numbers: `1` `1.0` `-1` `-1.0`
+- [x] Expressions: `(...)`
+- [x] Lists/Arrays/Sequences: `[...]`
+- [x] Strings:
+  - [ ] `"..."`
+  - [ ] `"\""`
+- [x] Numbers:
+  - [ ] `1`
+  - [ ] `1.0`
+  - [ ] `-1`
+  - [ ] `-1.0`
 - [ ] Booleans: `true` `false`
-- [ ] Nil: `nil`
-- [ ] Symbols: `/[a-zA-Z_-][a-zA-Z0-9_-]*`
+- [x] Nil: `nil`
+- [x] Symbols: `/[a-zA-Z_-][a-zA-Z0-9_-]*`
 
 ## Builtins
 
