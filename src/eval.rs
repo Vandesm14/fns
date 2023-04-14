@@ -179,6 +179,10 @@ impl<'a> Program<'a> {
               (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs / rhs),
               _ => Expr::Nil,
             },
+            "mod" => match (eval_next(), eval_next()) {
+              (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs % rhs),
+              _ => Expr::Nil,
+            },
 
             // Comparison
             "=" => Expr::Bool(eval_next() == eval_next()),
