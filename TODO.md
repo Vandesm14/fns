@@ -21,7 +21,7 @@
   - [ ] `(if (= x 2)) "x is 2" "x is not 2")`
   - [ ] `(if (= x 2) "x is 2")`
 - [ ] Loops:
-  - [ ] `(while (lt x 10) (println x) (set x (+ x 1)))`
+  - [ ] `(while (lt x 10) ((println x) (set x (+ x 1))))`
 
 - [ ] Arithmetic:
   - [x] `(+ 1 2)`

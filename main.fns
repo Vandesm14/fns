@@ -5,3 +5,7 @@
 
 (explode (greet "leon"))
 
+(def i 0)
+(while (< i 10) (println i) (def i (+ i 1)))
+
+i

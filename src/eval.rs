@@ -120,6 +120,32 @@ impl<'a> Program<'a> {
               }
             }
 
+            // Loops
+            "while" => match iter.next().unwrap().0.clone() {
+              lhs => {
+                let initial_bool = match self.eval_expr(lhs.clone()) {
+                  Expr::Bool(b) => b,
+                  _ => panic!("Expected bool for while condition {}", span),
+                };
+
+                if !initial_bool {
+                  return Expr::Nil;
+                }
+
+                let while_body =
+                  iter.map(|expr| expr.0.clone()).collect::<Vec<Expr>>();
+
+                while let Expr::Bool(true) = self.eval_expr(lhs.clone()) {
+                  while_body.iter().for_each(|expr| {
+                    self.eval_expr(expr.clone());
+                  });
+                }
+
+                Expr::Nil
+              }
+              _ => Expr::Nil,
+            },
+
             // Arithmetic
             "+" => match (eval_next(), eval_next()) {
               (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs + rhs),
@@ -172,6 +198,15 @@ impl<'a> Program<'a> {
               ),
               _ => Expr::Nil,
             },
+            "println" => {
+              let val = eval_next();
+
+              println!("{}", val);
+
+              val
+            }
+
+            // Runtime Functions
             _ => {
               let r#fn = self.r#fn(name).cloned();
 
