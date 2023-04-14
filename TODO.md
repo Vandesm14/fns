@@ -21,7 +21,8 @@
   - [ ] `(if (= x 2)) "x is 2" "x is not 2")`
   - [ ] `(if (= x 2) "x is 2")`
 - [ ] Loops:
-  - [ ] `(while (lt x 10) ((println x) (set x (+ x 1))))`
+  - [x] `(while (lt x 10) (println x) (def x (+ x 1)))`
+  - [x] `(while true (println "hello!") (break))`
 
 - [ ] Arithmetic:
   - [x] `(+ 1 2)`
@@ -45,4 +46,5 @@
   - [ ] `(pop x)`
 - [x] Strings:
   - [x] `(explode "hello")`
-  - [x] `(str "hello" "world")`
+  - [x] `(str "hello" "world" ...)`
+  - [x] `(println "Hello!")`

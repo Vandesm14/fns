@@ -139,11 +139,13 @@ impl<'a> Program<'a> {
                   let mut has_broken = false;
 
                   while_body.iter().for_each(|expr| {
-                    let result = self.eval_expr(expr.clone());
+                    if !has_broken {
+                      let result = self.eval_expr(expr.clone());
 
-                    if let Expr::Break = result {
-                      has_broken = true;
-                    }
+                      if let Expr::Break = result {
+                        has_broken = true;
+                      }
+                    };
                   });
 
                   if has_broken {
@@ -199,8 +201,19 @@ impl<'a> Program<'a> {
             },
 
             // Strings
-            "str" => match (eval_next(), eval_next()) {
-              (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),
+            "str" => match eval_next() {
+              lhs => {
+                let mut lhs = lhs.to_string();
+                let rhs = iter
+                  .map(|expr| self.eval_expr(expr.0.clone()))
+                  .collect::<Vec<Expr>>();
+
+                rhs.iter().for_each(|expr| {
+                  lhs.push_str(&expr.to_string());
+                });
+
+                Expr::Str(lhs)
+              }
               _ => Expr::Nil,
             },
             "explode" => match eval_next() {

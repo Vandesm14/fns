@@ -6,6 +6,7 @@
 (explode (greet "leon"))
 
 (def i 0)
-(while (< i 10) (println i) (def i (+ i 1)) (break))
+(while (< i 10) (def i (+ i 1)))
 
-i
+(println (str result " " i))
+(while true (println "you can see me") (break) (println "but not me"))
