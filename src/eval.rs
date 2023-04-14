@@ -78,7 +78,7 @@ impl<'a> Program<'a> {
 
         match fn_name {
           Expr::Symbol(name) => match *name {
-            // Functions that are built into the language (starts with fns with weird args)
+            // Variables and Functions
             "def" => {
               let name = iter.next().unwrap().0.clone();
               let val = self.eval_expr(iter.next().unwrap().0.clone());
@@ -120,6 +120,7 @@ impl<'a> Program<'a> {
               }
             }
 
+            // Arithmetic
             "+" => match (eval_next(), eval_next()) {
               (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Num(lhs + rhs),
               _ => Expr::Nil,
@@ -137,6 +138,7 @@ impl<'a> Program<'a> {
               _ => Expr::Nil,
             },
 
+            // Comparison
             "=" => Expr::Bool(eval_next() == eval_next()),
             "!=" => Expr::Bool(eval_next() != eval_next()),
             ">" => match (eval_next(), eval_next()) {
@@ -156,6 +158,7 @@ impl<'a> Program<'a> {
               _ => Expr::Nil,
             },
 
+            // Strings
             "str" => match (eval_next(), eval_next()) {
               (Expr::Str(lhs), Expr::Str(rhs)) => Expr::Str(lhs + &rhs),
               _ => Expr::Nil,

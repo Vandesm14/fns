@@ -1,0 +1,48 @@
+# Primitives
+
+## Language
+
+- [ ] Expressions: `(...)`
+- [ ] Lists/Arrays/Sequences: `[...]`
+- [ ] Strings: `"..."`
+- [ ] Numbers: `1` `1.0` `-1` `-1.0`
+- [ ] Booleans: `true` `false`
+- [ ] Nil: `nil`
+- [ ] Symbols: `/[a-zA-Z_-][a-zA-Z0-9_-]*`
+
+## Builtins
+
+- [ ] Variables:
+  - [x] `(def x 2)`
+  - [ ] Use `def` to re-assign a variable
+- [ ] Functions:
+  - [x] `(defn add [x y] (+ x y))`
+- [ ] Conditionals:
+  - [ ] `(if (= x 2)) "x is 2" "x is not 2")`
+  - [ ] `(if (= x 2) "x is 2")`
+- [ ] Loops:
+  - [ ] `(while (lt x 10) (println x) (set x (+ x 1)))`
+
+- [ ] Arithmetic:
+  - [x] `(+ 1 2)`
+  - [x] `(- 1 2)`
+  - [x] `(* 1 2)`
+  - [x] `(/ 1 2)`
+  - [ ] `(mod 1 2)`
+- [ ] Comparison:
+  - [x] `(= 1 2)`
+  - [x] `(!= 1 2)`
+  - [x] `(> 1 2)`
+  - [x] `(>= 1 2)`
+  - [x] `(< 1 2)`
+  - [x] `(<= 1 2)`
+- [ ] Arrays:
+  - [ ] `(def x [1 2 3])`
+  - [ ] `(get x 0)`
+  - [ ] `(set x 0 4)`
+  - [ ] `(len x)`
+  - [ ] `(push x 4)`
+  - [ ] `(pop x)`
+- [x] Strings:
+  - [x] `(explode "hello")`
+  - [x] `(str "hello" "world")`
