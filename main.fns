@@ -1,6 +1,6 @@
 (def hello "hello")
 (def world "world")
 
-(defn greet [name] (str hello name))
+(defn greet [world] (str (str hello " ") world))
 
 (greet "leon")
