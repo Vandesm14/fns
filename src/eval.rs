@@ -225,7 +225,7 @@ impl<'a> Program<'a> {
               ),
               _ => Expr::Nil,
             },
-            "println" => {
+            "print" => {
               let val = eval_next();
 
               println!("{}", val);
