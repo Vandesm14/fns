@@ -6,3 +6,10 @@
 (def hello "Goodbye")
 
 (println (str hello ", " world "!"))
+
+(def camelCase "camelCase")
+(def kebab-case "kebab-case")
+(def snake_case "snake_case")
+(def nmbrs123 "nmbrs123")
+
+(println (str camelCase ", " kebab-case ", " snake_case ", " nmbrs123))
