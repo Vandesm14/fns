@@ -24,7 +24,7 @@ impl<'a> fmt::Display for Expr<'a> {
       Expr::Nil => write!(f, "nil"),
       Expr::Bool(x) => write!(f, "{}", x),
       Expr::Num(n) => write!(f, "{}", n),
-      Expr::Str(s) => write!(f, "{}", s),
+      Expr::Str(s) => write!(f, "\"{}\"", s),
       Expr::Symbol(s) => write!(f, "{}", s),
       Expr::List(xs) => {
         write!(f, "(")?;

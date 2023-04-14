@@ -215,14 +215,21 @@ impl<'a> Program<'a> {
             // Strings
             "str" => {
               let lhs = eval_next();
-              let mut lhs = lhs.to_string();
+              let lhs = lhs.to_string();
+              let mut lhs = lhs[1..lhs.len() - 1].to_string();
+
               let rhs = iter
                 .map(|expr| self.eval_expr(expr.0.clone()))
                 .collect::<Vec<Expr>>();
 
-              rhs.iter().for_each(|expr| {
-                lhs.push_str(&expr.to_string());
-              });
+              rhs
+                .iter()
+                .map(|expr| expr.to_string())
+                // remove the first and last character (quotes)
+                .map(|expr| expr[1..expr.len() - 1].to_string())
+                .for_each(|expr| {
+                  lhs.push_str(&expr);
+                });
 
               Expr::Str(lhs)
             }
