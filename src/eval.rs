@@ -120,6 +120,16 @@ impl<'a> Program<'a> {
               }
             }
 
+            // Conditionals
+            "if" => match eval_next() {
+              Expr::Bool(true) => eval_next(),
+              Expr::Bool(false) => match iter.nth(1) {
+                Some(expr) => self.eval_expr(expr.0.clone()),
+                None => Expr::Nil,
+              },
+              _ => panic!("Expected bool for if condition {}", span),
+            },
+
             // Loops
             "while" => {
               let lhs = iter.next().unwrap().0.clone();

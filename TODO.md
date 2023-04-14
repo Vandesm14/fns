@@ -17,9 +17,9 @@
   - [x] Use `def` to re-assign a variable
 - [x] Functions:
   - [x] `(defn add [x y] (+ x y))`
-- [ ] Conditionals:
-  - [ ] `(if (= x 2)) "x is 2" "x is not 2")`
-  - [ ] `(if (= x 2) "x is 2")`
+- [x] Conditionals:
+  - [x] `(if (= x 2) "x is 2" "x is not 2")`
+  - [x] `(if (= x 2) "x is 2")`
 - [x] Loops:
   - [x] `(while (lt x 10) (println x) (def x (+ x 1)))`
   - [x] `(while true (println "hello!") (break))`
