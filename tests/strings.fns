@@ -1,4 +1,4 @@
-(def hello_world (str "Hello, " "world!"))
+(def hello_world (str "Hello" ", " "world" "!"))
 (def exploded (explode hello_world))
 
 (println hello_world)
