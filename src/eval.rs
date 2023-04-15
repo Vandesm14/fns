@@ -243,6 +243,47 @@ impl<'a> Program<'a> {
 
               val
             }
+            "len" => {
+              let array = match eval_next() {
+                Expr::Array(lhs) => lhs,
+                _ => panic!("Expected array for len {}", span),
+              };
+
+              Expr::Num(array.len() as f64)
+            }
+            "push" => {
+              let symbol = iter.next().unwrap().0.clone();
+              let val = self.eval_expr(iter.next().unwrap().0.clone());
+
+              let symbol = match symbol {
+                Expr::Symbol(symbol) => symbol,
+                _ => panic!("Expected symbol for push {}", span),
+              };
+              let array = match self.var_mut(symbol) {
+                Some(Expr::Array(lhs)) => lhs,
+                _ => panic!("Expected array for push {}", span),
+              };
+              array.push((val.clone(), SimpleSpan::new(0, 0)));
+
+              val
+            }
+            "pop" => {
+              let symbol = iter.next().unwrap().0.clone();
+
+              let symbol = match symbol {
+                Expr::Symbol(symbol) => symbol,
+                _ => panic!("Expected symbol for pop {}", span),
+              };
+              let array = match self.var_mut(symbol) {
+                Some(Expr::Array(lhs)) => lhs,
+                _ => panic!("Expected array for pop {}", span),
+              };
+
+              match array.pop() {
+                Some((val, _)) => val,
+                None => Expr::Nil,
+              }
+            }
 
             // Strings
             "str" => {

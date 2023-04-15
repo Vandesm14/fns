@@ -42,13 +42,13 @@
   - [x] `(>= 1 2)`
   - [x] `(< 1 2)`
   - [x] `(<= 1 2)`
-- [ ] Arrays:
+- [x] Arrays:
   - [x] `(def x [1 2 3])`
   - [x] `(get x 0)`
   - [x] `(set x 0 4)`
   - [x] `(len x)`
-  - [ ] `(push x 4)`
-  - [ ] `(pop x)`
+  - [x] `(push x 4)`
+  - [x] `(pop x)`
 - [x] Strings:
   - [x] `(explode "hello")`
   - [x] `(str "hello" "world" ...)`
