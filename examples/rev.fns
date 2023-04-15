@@ -1,4 +1,4 @@
-; Reverses the contents of an array.
+;; Reverses the contents of an array.
 (defn rev [arr] 
   (def res [])
 
