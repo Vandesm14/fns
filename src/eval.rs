@@ -1,7 +1,7 @@
 use ariadne::{sources, Color, Label, Report, ReportKind};
 use chumsky::prelude::*;
 use core::fmt;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::{
   lex::lexer,
@@ -12,7 +12,7 @@ use crate::{
 #[derive(Debug, Clone, PartialEq)]
 pub struct Function<'a> {
   expr: Expr<'a>,
-  args: HashSet<String>,
+  args: Vec<String>,
 }
 
 #[derive(Default)]
@@ -64,7 +64,7 @@ impl<'a> Program<'a> {
     self.vars.get_mut(name)
   }
 
-  fn set_fn(&mut self, name: String, expr: Expr<'a>, args: HashSet<String>) {
+  fn set_fn(&mut self, name: String, expr: Expr<'a>, args: Vec<String>) {
     self.fns.insert(name, Function { expr, args });
   }
 
@@ -106,7 +106,8 @@ impl<'a> Program<'a> {
             "defn" => {
               let name = iter.next().unwrap().0.clone();
               let args = iter.next().unwrap().0.clone();
-
+              
+// !!!! BETWEEN THESE !!!!
               let expr = iter.map(|expr| expr.0.clone()).collect::<Vec<Expr>>();
 
               if let Expr::Symbol(name) = name {
@@ -121,6 +122,7 @@ impl<'a> Program<'a> {
                       }
                     })
                     .collect();
+// !!!! BETWEEN THESE !!!!
 
                   self.set_fn(name.to_string(), Expr::Group(expr), args);
 
