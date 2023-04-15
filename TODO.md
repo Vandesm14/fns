@@ -5,14 +5,14 @@
 - [x] Expressions: `(...)`
 - [x] Lists/Arrays/Sequences: `[...]`
 - [x] Strings:
-  - [ ] `"..."`
-  - [ ] `"\""`
+  - [x] `"..."`
+  - [x] `"\""`
 - [x] Numbers:
   - [x] `1`
   - [x] `1.0`
   - [x] `-1`
   - [x] `-1.0`
-- [ ] Booleans: `true` `false`
+- [x] Booleans: `true` `false`
 - [x] Nil: `nil`
 - [x] Symbols: `/[a-zA-Z_-][a-zA-Z0-9_-]*`
 

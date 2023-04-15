@@ -1,0 +1,8 @@
+(def is-true true)
+(def is-false false)
+
+(print (= is-true true))
+(print (= is-false false))
+
+(print (= is-true false))
+(print (= is-false true))
