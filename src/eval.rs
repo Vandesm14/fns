@@ -74,6 +74,14 @@ impl<'a> Program<'a> {
 
   pub fn eval_expr(&mut self, expr: Expr<'a>) -> Expr<'a> {
     match expr {
+      Expr::Group(exprs) => {
+        let last = exprs.iter().map(|expr| self.eval_expr(expr.clone())).last();
+
+        match last {
+          Some(expr) => expr,
+          None => Expr::Nil,
+        }
+      }
       Expr::List(exprs) => {
         let mut iter = exprs.iter();
         let (fn_name, span) = iter.next().unwrap();
@@ -98,7 +106,8 @@ impl<'a> Program<'a> {
             "defn" => {
               let name = iter.next().unwrap().0.clone();
               let args = iter.next().unwrap().0.clone();
-              let expr = iter.next().unwrap().0.clone();
+
+              let expr = iter.map(|expr| expr.0.clone()).collect::<Vec<Expr>>();
 
               if let Expr::Symbol(name) = name {
                 if let Expr::Array(args) = args {
@@ -113,7 +122,7 @@ impl<'a> Program<'a> {
                     })
                     .collect();
 
-                  self.set_fn(name.to_string(), expr, args);
+                  self.set_fn(name.to_string(), Expr::Group(expr), args);
 
                   Expr::Nil
                 } else {

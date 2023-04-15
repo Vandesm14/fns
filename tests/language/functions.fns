@@ -1,0 +1,7 @@
+(def hello "Hello")
+
+(defn greet [name] (str hello ", " name))
+(defn multiple [] (print "line 1") (print "line 2"))
+
+(print (greet "Shane"))
+(multiple)

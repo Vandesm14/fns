@@ -16,6 +16,9 @@ pub enum Expr<'a> {
   Array(Vec<Spanned<Self>>),
   Break,
   Error,
+
+  /// A group of expressions that should be evaluated together.
+  Group(Vec<Self>),
 }
 
 impl<'a> fmt::Display for Expr<'a> {
@@ -48,6 +51,16 @@ impl<'a> fmt::Display for Expr<'a> {
       }
       Expr::Break => write!(f, "break"),
       Expr::Error => write!(f, "error"),
+      Expr::Group(xs) => {
+        write!(f, "(")?;
+        for (i, x) in xs.iter().enumerate() {
+          if i > 0 {
+            write!(f, " ")?;
+          }
+          write!(f, "{}", x)?;
+        }
+        write!(f, ")")
+      }
     }
   }
 }
