@@ -106,8 +106,6 @@ impl<'a> Program<'a> {
             "defn" => {
               let name = iter.next().unwrap().0.clone();
               let args = iter.next().unwrap().0.clone();
-              
-// !!!! BETWEEN THESE !!!!
               let expr = iter.map(|expr| expr.0.clone()).collect::<Vec<Expr>>();
 
               if let Expr::Symbol(name) = name {
@@ -122,7 +120,6 @@ impl<'a> Program<'a> {
                       }
                     })
                     .collect();
-// !!!! BETWEEN THESE !!!!
 
                   self.set_fn(name.to_string(), Expr::Group(expr), args);
 
