@@ -143,9 +143,14 @@ where
 
   let token = num.or(string).or(ctrl).or(boolean).or(nil).or(symbol);
 
+  let comment = just(";;")
+    .then(any().and_is(just('\n').not()).repeated())
+    .padded();
+
   token
     .map_with_span(|tok, span| (tok, span))
     .padded()
+    .padded_by(comment.repeated())
     .recover_with(skip_then_retry_until(any().ignored(), end()))
     .repeated()
     .collect()
