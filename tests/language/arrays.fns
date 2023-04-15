@@ -3,3 +3,7 @@
 
 (print array)
 (print array2)
+
+(print (get array2 1))
+(set array2 1 "3")
+(print (get array2 1))

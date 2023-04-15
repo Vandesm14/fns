@@ -60,6 +60,10 @@ impl<'a> Program<'a> {
     self.vars.get(name)
   }
 
+  fn var_mut(&mut self, name: &str) -> Option<&mut Expr<'a>> {
+    self.vars.get_mut(name)
+  }
+
   fn set_fn(&mut self, name: String, expr: Expr<'a>, args: HashSet<String>) {
     self.fns.insert(name, Function { expr, args });
   }
@@ -211,6 +215,34 @@ impl<'a> Program<'a> {
               (Expr::Num(lhs), Expr::Num(rhs)) => Expr::Bool(lhs <= rhs),
               _ => Expr::Nil,
             },
+
+            // Arrays
+            "get" => match (eval_next(), eval_next()) {
+              (Expr::Array(lhs), Expr::Num(rhs)) => lhs[rhs as usize].0.clone(),
+              _ => Expr::Nil,
+            },
+            "set" => {
+              let symbol = iter.next().unwrap().0.clone();
+              let index = self.eval_expr(iter.next().unwrap().0.clone());
+              let val = self.eval_expr(iter.next().unwrap().0.clone());
+
+              let symbol = match symbol {
+                Expr::Symbol(symbol) => symbol,
+                _ => panic!("Expected symbol for set {}", span),
+              };
+              let array = match self.var_mut(symbol) {
+                Some(Expr::Array(lhs)) => lhs,
+                _ => panic!("Expected array for set {}", span),
+              };
+              let index = match index {
+                Expr::Num(index) => index,
+                _ => panic!("Expected number for set {}", span),
+              };
+
+              array[index as usize].0 = val.clone();
+
+              val
+            }
 
             // Strings
             "str" => {

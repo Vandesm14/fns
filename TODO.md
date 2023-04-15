@@ -29,7 +29,6 @@
 - [x] Loops:
   - [x] `(while (lt x 10) (println x) (def x (+ x 1)))`
   - [x] `(while true (println "hello!") (break))`
-
 - [x] Arithmetic:
   - [x] `(+ 1 2)`
   - [x] `(- 1 2)`
@@ -44,8 +43,8 @@
   - [x] `(< 1 2)`
   - [x] `(<= 1 2)`
 - [ ] Arrays:
-  - [ ] `(def x [1 2 3])`
-  - [ ] `(get x 0)`
+  - [x] `(def x [1 2 3])`
+  - [x] `(get x 0)`
   - [ ] `(set x 0 4)`
   - [ ] `(len x)`
   - [ ] `(push x 4)`
