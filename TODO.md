@@ -45,8 +45,8 @@
 - [ ] Arrays:
   - [x] `(def x [1 2 3])`
   - [x] `(get x 0)`
-  - [ ] `(set x 0 4)`
-  - [ ] `(len x)`
+  - [x] `(set x 0 4)`
+  - [x] `(len x)`
   - [ ] `(push x 4)`
   - [ ] `(pop x)`
 - [x] Strings:
