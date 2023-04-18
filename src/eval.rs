@@ -339,7 +339,7 @@ pub fn eval_expr(expr: Expr, scope: &mut Scope) -> Expr {
             val
           }
 
-          // TODO: Add docs for these (scratch functions for testing)
+          // Eval and IO (import/export groundwork)
           "read-file" => {
             let path = match eval_expr(iter.next().unwrap().0.clone(), scope) {
               Expr::Str(path) => path,
