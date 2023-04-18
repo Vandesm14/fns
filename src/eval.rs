@@ -331,9 +331,26 @@ pub fn eval_expr(expr: Expr, scope: &mut Scope) -> Expr {
           "print" => {
             let val = eval_expr(iter.next().unwrap().0.clone(), scope);
 
-            println!("{}", val);
+            match val {
+              Expr::Str(val) => print!("{}", scope.spurs.resolve(&val)),
+              _ => print!("{}", val),
+            }
 
             val
+          }
+
+          // TODO: Add docs for these (scratch functions for testing)
+          "read-file" => {
+            let path = match eval_expr(iter.next().unwrap().0.clone(), scope) {
+              Expr::Str(path) => path,
+              _ => panic!("Expected string for read-file {}", span),
+            };
+
+            let path = scope.spurs.resolve(&path);
+
+            let contents = std::fs::read_to_string(path).unwrap();
+
+            Expr::Str(scope.spurs.get_or_intern(contents))
           }
 
           // Runtime Functions
