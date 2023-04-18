@@ -352,6 +352,16 @@ pub fn eval_expr(expr: Expr, scope: &mut Scope) -> Expr {
 
             Expr::Str(scope.spurs.get_or_intern(contents))
           }
+          "eval" => {
+            let expr = match eval_expr(iter.next().unwrap().0.clone(), scope) {
+              Expr::Str(expr) => expr,
+              _ => panic!("Expected string for eval {}", span),
+            };
+
+            let expr = scope.spurs.resolve(&expr).to_string();
+
+            eval(&expr, scope, "eval".to_string()).0
+          }
 
           // Runtime Functions
           _ => {
