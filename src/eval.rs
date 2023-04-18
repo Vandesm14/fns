@@ -332,8 +332,8 @@ pub fn eval_expr(expr: Expr, scope: &mut Scope) -> Expr {
             let val = eval_expr(iter.next().unwrap().0.clone(), scope);
 
             match val {
-              Expr::Str(val) => print!("{}", scope.spurs.resolve(&val)),
-              _ => print!("{}", val),
+              Expr::Str(val) => println!("{}", scope.spurs.resolve(&val)),
+              _ => println!("{}", val),
             }
 
             val
