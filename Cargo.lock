@@ -50,6 +50,7 @@ version = "0.1.0"
 dependencies = [
  "ariadne",
  "chumsky",
+ "lasso",
  "thiserror",
 ]
 
@@ -60,6 +61,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43a3c133739dddd0d2990f9a4bdf8eb4b21ef50e4851ca85ab661199821d510e"
 dependencies = [
  "ahash",
+]
+
+[[package]]
+name = "lasso"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4badc7a606a3096e40b886fb2f63803cacf11cd79796ae04e3f4b7e35a38cfc2"
+dependencies = [
+ "hashbrown",
 ]
 
 [[package]]

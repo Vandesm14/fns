@@ -1,27 +1,32 @@
 use chumsky::{container::Container, error::Error, prelude::*, util::Maybe};
 use core::fmt;
+use lasso::{Rodeo, Spur};
+
+use crate::Spanned;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Token<'a> {
+pub enum Token {
   Nil,
   Bool(bool),
   Num(f64),
-  Str(&'a str),
-  Symbol(&'a str),
+  Str(Spur),
+  Symbol(Spur),
   LBracket,
   RBracket,
   LParen,
   RParen,
 }
 
-impl<'a> fmt::Display for Token<'a> {
+impl fmt::Display for Token {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       Token::Nil => write!(f, "nil"),
       Token::Bool(x) => write!(f, "{}", x),
       Token::Num(n) => write!(f, "{}", n),
-      Token::Str(s) => write!(f, "{}", s),
-      Token::Symbol(s) => write!(f, "{}", s),
+      // TODO: implement a proper formatter
+      Token::Str(s) => write!(f, "<string {:?}>", s),
+      // TODO: implement a proper formatter
+      Token::Symbol(s) => write!(f, "<symbol {:?}>", s),
       Token::LBracket => write!(f, "["),
       Token::RBracket => write!(f, "]"),
       Token::LParen => write!(f, "("),
@@ -32,9 +37,9 @@ impl<'a> fmt::Display for Token<'a> {
 
 /// Performs lexical analysis on the source code and returns a list of tokens.
 pub fn lexer<'source, O, E>(
-) -> impl Parser<'source, &'source str, O, extra::Err<E>> + Clone
+) -> impl Parser<'source, &'source str, O, extra::Full<E, Rodeo, ()>> + Clone
 where
-  O: Container<(Token<'source>, SimpleSpan)>,
+  O: Container<Spanned<Token>>,
   E: 'source + Error<'source, &'source str>,
 {
   // A parser for Nil
@@ -106,7 +111,9 @@ where
       .or(escape)
       .repeated()
       .slice()
-      .map(Token::Str)
+      .map_with_state(|s, _, state: &mut Rodeo| {
+        Token::Str(state.get_or_intern(s))
+      })
       .delimited_by(just('"'), just('"'))
   };
 
@@ -131,7 +138,9 @@ where
         .repeated(),
     )
     .slice()
-    .map(Token::Symbol);
+    .map_with_state(|s, _, state: &mut Rodeo| {
+      Token::Symbol(state.get_or_intern(s))
+    });
 
   // A parser for control characters
   let ctrl = choice((
