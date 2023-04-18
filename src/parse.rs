@@ -2,16 +2,17 @@ use chumsky::{
   container::Container, error::Error, input::SpannedInput, prelude::*,
 };
 use core::fmt;
+use lasso::{Rodeo, Spur};
 
 use crate::{lex::Token, Spanned};
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Expr<'a> {
+pub enum Expr {
   Nil,
   Bool(bool),
   Num(f64),
-  Str(String),
-  Symbol(&'a str),
+  Str(Spur),
+  Symbol(Spur),
   List(Vec<Spanned<Self>>),
   Array(Vec<Spanned<Self>>),
   Break,
@@ -21,14 +22,16 @@ pub enum Expr<'a> {
   Group(Vec<Self>),
 }
 
-impl<'a> fmt::Display for Expr<'a> {
+impl fmt::Display for Expr {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       Expr::Nil => write!(f, "nil"),
       Expr::Bool(x) => write!(f, "{}", x),
       Expr::Num(n) => write!(f, "{}", n),
-      Expr::Str(s) => write!(f, "\"{}\"", s),
-      Expr::Symbol(s) => write!(f, "{}", s),
+      // TODO: implement a proper formatter
+      Expr::Str(s) => write!(f, "<string {:?}>", s),
+      // TODO: implement a proper formatter
+      Expr::Symbol(s) => write!(f, "<symbol {:?}>", s),
       Expr::List(xs) => {
         write!(f, "(")?;
         for (i, x) in xs.iter().enumerate() {
@@ -67,14 +70,18 @@ impl<'a> fmt::Display for Expr<'a> {
 
 /// Convenience type for a <code>[SpannedInput]\<[Token]\></code>.
 pub type ParserInput<'source, 'tokens> =
-  SpannedInput<Token<'source>, SimpleSpan, &'tokens [Spanned<Token<'source>>]>;
+  SpannedInput<Token, SimpleSpan, &'tokens [Spanned<Token>]>;
 
 /// Creates a parser which transforms [`Token`]s into [`Expr`]s.
-pub fn parser<'source, 'tokens, O, E>(
-) -> impl Parser<'tokens, ParserInput<'source, 'tokens>, O, extra::Err<E>> + Clone
+pub fn parser<'source, 'tokens, O, E>() -> impl Parser<
+  'tokens,
+  ParserInput<'source, 'tokens>,
+  O,
+  extra::Full<E, Rodeo, ()>,
+> + Clone
 where
   'source: 'tokens,
-  O: Container<Spanned<Expr<'source>>>,
+  O: Container<Spanned<Expr>>,
   E: 'tokens + Error<'tokens, ParserInput<'source, 'tokens>>,
 {
   recursive(|expr| {
@@ -82,7 +89,7 @@ where
       Token::Nil => Expr::Nil,
       Token::Bool(b) => Expr::Bool(b),
       Token::Num(n) => Expr::Num(n),
-      Token::Str(s) => Expr::Str(s.to_string()),
+      Token::Str(s) => Expr::Str(s),
       Token::Symbol(s) => Expr::Symbol(s),
     };
 
