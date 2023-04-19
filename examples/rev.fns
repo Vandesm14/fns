@@ -1,14 +1,18 @@
-;; Reverses the contents of an array.
-(defn rev [arr] 
-  (def res [])
+(def x 12)
+(def print-it '([x] (print (x))))
+(print-it x)
 
-  (def l (len arr))
-  (def i 0)
+;; ;; Reverses the contents of an array.
+;; (defn rev [arr] 
+;;   (def res [])
 
-  (while (< i l)
-    (push res (pop arr))
-    (def i (+ i 1)))
+;;   (def l (len arr))
+;;   (def i 0)
+
+;;   (while (< i l)
+;;     (push res (pop arr))
+;;     (def i (+ i 1)))
     
-  res)
+;;   res)
 
-(rev [1 2 3])
+;; (rev [1 2 3])
