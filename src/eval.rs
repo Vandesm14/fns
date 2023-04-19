@@ -38,11 +38,12 @@ where
   K: Key + Hash + core::fmt::Debug,
   I: Interner<K> + Clone,
 {
+  let mut last: Result<Expr<K>, Error<K>> = Ok(Expr::Nil);
   for expr in exprs {
     // TODO: implement a way to return
-    eval_expr(expr, scope)?;
+    last = eval_expr(expr, scope);
   }
-  return Ok(Expr::Nil);
+  return last;
 }
 
 pub fn eval_expr<K, I>(
