@@ -1,5 +1,5 @@
 use chumsky::prelude::*;
-use fns::parse::ParserInput;
+use fns::{eval::ExprFormatter, parse::ParserInput};
 use lasso::Rodeo;
 
 fn main() {
@@ -40,13 +40,16 @@ fn main() {
     }
 
     if let Some(exprs) = exprs {
-      // println!("EXPRS:");
-      // exprs.iter().for_each(|expr| println!("  {expr:?}"));
-
-      println!(
-        "RESULT: {:?}",
-        fns::eval::eval(exprs.into_iter(), &mut scope)
-      );
+      match fns::eval::eval(exprs.into_iter(), &mut scope) {
+        Ok(expr) => {
+          let f = ExprFormatter {
+            interner: &scope.interner,
+            expr: &expr,
+          };
+          println!("RESULT: {f}");
+        }
+        Err(err) => eprintln!("RESULT: {err}"),
+      }
     }
   }
 

@@ -161,8 +161,8 @@ where
   K: Key,
   I: Interner<K>,
 {
-  interner: &'a I,
-  expr: &'a Expr<K>,
+  pub interner: &'a I,
+  pub expr: &'a Expr<K>,
 }
 
 impl<'a, K, I> fmt::Display for ExprFormatter<'a, K, I>
