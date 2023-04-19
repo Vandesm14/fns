@@ -1,5 +1,5 @@
 use chumsky::prelude::*;
-use fns::{eval::ExprFormatter, parse::ParserInput};
+use fns::{eval::{ExprFormatter, ErrorFormatter}, parse::ParserInput};
 use lasso::Rodeo;
 
 fn main() {
@@ -48,7 +48,13 @@ fn main() {
           };
           println!("RESULT: {f}");
         }
-        Err(err) => eprintln!("RESULT: {err}"),
+        Err(err) => {
+          let f = ErrorFormatter {
+            interner: &scope.interner,
+            error: &err,
+          };
+          eprintln!("ERROR: {f}")
+        },
       }
     }
   }

@@ -155,6 +155,39 @@ where
   }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ErrorFormatter<'a, K, I>
+where
+  K: Key,
+  I: Interner<K>,
+{
+  pub interner: &'a I,
+  pub error: &'a Error<K>,
+}
+
+impl<'a, K, I> fmt::Display for ErrorFormatter<'a, K, I>
+where
+  K: Key,
+  I: Interner<K>,
+{
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self.error {
+      Error::UnknownVariable(ident) => {
+        write!(f, "Unknown variable: {}", self.interner.resolve(ident))
+      }
+      Error::InvalidFunctionLayout => {
+        write!(f, "invalid function layout, expected '([args] body...)")
+      }
+      Error::InvalidFunctionArgumentType(expr) => {
+        write!(f, "Invalid function argument type: {}", ExprFormatter {
+          interner: self.interner,
+          expr,
+        })
+      }
+    }
+  }
+}
+
 #[derive(Debug, Clone, PartialEq, Error)]
 pub enum Error<K> {
   #[error("unknown variable {0:?}")]
