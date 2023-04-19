@@ -94,6 +94,18 @@ where
                 }
                 _ => Err(Error::InvalidFunctionArgumentType(Expr::Nil)),
               },
+              // "defn" => match (callee_exprs.next(), callee_exprs.next(), callee_exprs.collect::<Vec<_>>()) {
+              //   (Some(Expr::Ident(ident)), Some(Expr::Array(args)), body) => {
+              //     scope.vars.insert(ident, Expr::List(vec![Expr::Array(args), Expr::List(body)]));
+              //     Ok(Expr::Nil)
+              //   }
+              //   _ => Err(Error::InvalidFunctionLayout),
+              // }
+              "+" => match (callee_exprs.next(), callee_exprs.next()) {
+                (Some(Expr::Int(a)), Some(Expr::Int(b))) => Ok(Expr::Int(a + b)),
+                (Some(a), Some(b)) => Err(Error::InvalidFunctionArgumentType(Expr::List(vec![a, b]))),
+                _ => Err(Error::InvalidFunctionArgumentType(Expr::Nil)),
+              },
               _ => match scope.var(&fn_ident).clone() {
                 Expr::List(fn_exprs) => {
                   eval_call_list(fn_exprs.into_iter(), callee_exprs, scope)
