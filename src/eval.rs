@@ -1,4 +1,4 @@
-use core::{hash::Hash, marker::PhantomData};
+use core::{fmt, hash::Hash, iter, marker::PhantomData};
 use std::collections::HashMap;
 
 use lasso::{Interner, Key};
@@ -33,9 +33,7 @@ pub fn eval<K, I>(
   scope: &mut Scope<K, I>,
 ) -> Result<Expr<K>, Error<K>>
 where
-  // TODO: this is temporary for print to function, replace once a proper
-  //       formatter is made
-  K: Key + Hash + core::fmt::Debug,
+  K: Key + Hash,
   I: Interner<K> + Clone,
 {
   let mut last: Result<Expr<K>, Error<K>> = Ok(Expr::Nil);
@@ -51,9 +49,7 @@ pub fn eval_expr<K, I>(
   scope: &mut Scope<K, I>,
 ) -> Result<Expr<K>, Error<K>>
 where
-  // TODO: this is temporary for print to function, replace once a proper
-  //       formatter is made
-  K: Key + Hash + core::fmt::Debug,
+  K: Key + Hash,
   I: Interner<K> + Clone,
 {
   match expr {
@@ -71,7 +67,20 @@ where
             match fn_ident_str {
               "print" => {
                 callee_exprs
-                  .for_each(|expr| println!("{:?}", eval_expr(expr, scope)));
+                  .map(|expr| eval_expr(expr, scope))
+                  .collect::<Vec<_>>()
+                  .into_iter()
+                  .try_for_each(|expr| {
+                    let expr = expr?;
+                    println!(
+                      "{}",
+                      ExprFormatter {
+                        interner: &scope.interner,
+                        expr: &expr,
+                      }
+                    );
+                    Ok::<_, Error<_>>(())
+                  })?;
                 Ok(Expr::Nil)
               }
               "def" => match (callee_exprs.next(), callee_exprs.next()) {
@@ -89,7 +98,7 @@ where
                 Expr::List(fn_exprs) => {
                   eval_call_list(fn_exprs.into_iter(), callee_exprs, scope)
                 }
-                expr => Ok(expr),
+                expr => Err(Error::InvalidFunctionArgumentType(expr)),
               },
             }
           }
@@ -108,9 +117,7 @@ pub fn eval_call_list<K, I>(
   scope: &mut Scope<K, I>,
 ) -> Result<Expr<K>, Error<K>>
 where
-  // TODO: this is temporary for print to function, replace once a proper
-  //       formatter is made
-  K: Key + Hash + core::fmt::Debug,
+  K: Key + Hash,
   I: Interner<K> + Clone,
 {
   match fn_exprs.next() {
@@ -146,6 +153,87 @@ pub enum Error<K> {
   InvalidFunctionArgumentType(Expr<K>),
   // #[error("invalid variable identifier {0:?}")]
   // InvalidVariableIdent(Expr<K>),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ExprFormatter<'a, K, I>
+where
+  K: Key,
+  I: Interner<K>,
+{
+  interner: &'a I,
+  expr: &'a Expr<K>,
+}
+
+impl<'a, K, I> fmt::Display for ExprFormatter<'a, K, I>
+where
+  K: Key,
+  I: Interner<K>,
+{
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self.expr {
+      Expr::Nil => f.write_str("nil"),
+      Expr::Bool(x) => write!(f, "{x}"),
+      Expr::Int(x) => write!(f, "{x}"),
+      Expr::Float(x) => write!(f, "{x}"),
+
+      Expr::Ident(x) => f.write_str(self.interner.resolve(x)),
+
+      Expr::Array(x) => {
+        f.write_str("[")?;
+        iter::once("")
+          .chain(iter::repeat(" "))
+          .zip(x.iter())
+          .try_for_each(|(pad, expr)| {
+            write!(
+              f,
+              "{pad}{}",
+              Self {
+                interner: self.interner,
+                expr
+              }
+            )
+          })?;
+        f.write_str("]")
+      }
+      Expr::List(x) => {
+        f.write_str("'(")?;
+        iter::once("")
+          .chain(iter::repeat(" "))
+          .zip(x.iter())
+          .try_for_each(|(pad, expr)| {
+            write!(
+              f,
+              "{pad}{}",
+              Self {
+                interner: self.interner,
+                expr
+              }
+            )
+          })?;
+        f.write_str(")")
+      }
+      Expr::Call(x) => {
+        f.write_str("(")?;
+        iter::once("")
+          .chain(iter::repeat(" "))
+          .zip(x.iter())
+          .try_for_each(|(pad, expr)| {
+            write!(
+              f,
+              "{pad}{}",
+              Self {
+                interner: self.interner,
+                expr
+              }
+            )
+          })?;
+        f.write_str(")")
+      }
+
+      Expr::Error => f.write_str("<error>"),
+    }
+  }
 }
 
 // use ariadne::{sources, Color, Label, Report, ReportKind};

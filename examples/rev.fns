@@ -1,6 +1,5 @@
-(def x 12)
-(def print-it '([x] (print (x))))
-(print-it x)
+(def add '([a b] (+ a b)))
+(print (add 1 2))
 
 ;; ;; Reverses the contents of an array.
 ;; (defn rev [arr] 
