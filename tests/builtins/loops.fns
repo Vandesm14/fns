@@ -1,5 +1,0 @@
-(def i 0)
-(while (< i 10) (def i (+ i 1)))
-(print (str "Should be 10: " i))
-
-(while true (print "foo") (break) (print "bar"))

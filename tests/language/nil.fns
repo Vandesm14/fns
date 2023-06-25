@@ -1,7 +1,0 @@
-(def null nil)
-
-(defn is-null [x] (= x null))
-
-(print (is-null null))
-(print (is-null nil))
-(print (is-null 1))

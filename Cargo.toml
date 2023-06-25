@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-lasso = "0.7.0"
-ariadne = "0.2.0"
+lasso = { version = "0.7.2", features = ["ahasher"] }
 thiserror = "1"
+# wasm-encoder = "0.29.0"
+# wasmtime = "10"
 
 [dependencies.chumsky]
 git = "https://github.com/zesterer/chumsky"
-rev = "f664d7d7f36205bca58842233431927c14be69c0"
+rev = "7467d76e7b5b66864d9167120a1312b208f982c8"

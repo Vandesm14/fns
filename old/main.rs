@@ -2,11 +2,21 @@ use chumsky::prelude::*;
 use lasso::{Rodeo, Spur};
 
 fn main() {
-    let source = "(@wat (@i32.const -12))";
+    let source = r#"
+        (defn i32 (int) (@wat (@i32.const int)))
+        (defn i64 (int) (@wat (@i64.const int)))
+        (defn f32 (int) (@wat (@f32.const int)))
+        (defn f64 (int) (@wat (@f64.const int)))
+
+        (def false (i32 0))
+        (def true (i32 1))
+
+        (defn add (lhs rhs) (@wat (i32.add $lhs $rhs)))
+    "#;
 
     let mut interner: Rodeo<Spur> = Rodeo::new();
 
-    let tokens = fns::lex::lexer::<_, _, _, Vec<_>>()
+    let tokens = fns::lex::lexer::<_, _, _, Vec<_>, Rich<_>>()
         .parse_with_state(source, &mut interner)
         .into_result();
 
@@ -21,7 +31,7 @@ fn main() {
         }
     };
 
-    let stmts = fns::parse::parser::<_, _, _, Vec<_>>()
+    let stmts = fns::parse::parser::<_, _, _, Vec<_>, Rich<_>>()
         .parse_with_state(
             tokens
                 .as_slice()

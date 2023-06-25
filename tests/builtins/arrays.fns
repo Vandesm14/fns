@@ -1,7 +1,0 @@
-(def array [])
-
-(push array 0)
-
-(print array)
-(print (pop array))
-(print array)

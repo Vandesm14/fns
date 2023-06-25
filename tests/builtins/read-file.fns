@@ -1,3 +1,0 @@
-(def file (read-file "tests/builtins/read-file.txt"))
-
-(print file)
